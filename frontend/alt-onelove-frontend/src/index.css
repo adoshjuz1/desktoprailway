@@ -1,0 +1,115 @@
+:root {
+    --primary-blue: #0F2C59;       
+    --accent-teal: #00B4D8;        
+    --accent-hover: #0096C7;
+    --bg-light: #f4f6f9;
+    --card-bg: #ffffff;
+    --text-color: #333333;
+    --nav-bg: #0F2C59;
+    --border-color: #dee2e6;
+}
+
+[data-bs-theme="dark"] {
+    --bg-light: #0a111e;
+    --card-bg: #131d31;
+    --text-color: #e0e0e0;
+    --nav-bg: #071224;
+    --border-color: #212e4a;
+}
+
+body { 
+    background-color: var(--bg-light); 
+    font-family: 'Segoe UI', Tahoma, Geneva, sans-serif; 
+    color: var(--text-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.hero-section { 
+    background: linear-gradient(135deg, #0F2C59 0%, #071428 100%); 
+    color: white; 
+    padding: 40px 0 70px 0; 
+}
+
+[data-bs-theme="dark"] .hero-section {
+    background: linear-gradient(135deg, #071224 0%, #020610 100%);
+}
+
+.search-box { 
+    background: var(--card-bg); 
+    border-radius: 12px; 
+    padding: 20px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+    margin-top: -40px; 
+    color: var(--text-color); 
+}
+
+.btn-teal { 
+    background-color: var(--accent-teal); 
+    color: white; 
+    font-weight: 600; 
+}
+.btn-teal:hover { 
+    background-color: var(--accent-hover); 
+    color: white; 
+}
+
+.ad-banner {
+    background: linear-gradient(135deg, #00B4D8 0%, #0F2C59 100%);
+    border-radius: 16px;
+    color: white;
+    padding: 55px 40px;
+    box-shadow: 0 8px 25px rgba(0, 180, 216, 0.2);
+}
+
+.route-card {
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    background: var(--card-bg);
+    color: var(--text-color);
+}
+.route-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 180, 216, 0.15) !important;
+    border-color: var(--accent-teal);
+}
+
+.info-section {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 35px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border: 1px solid var(--border-color);
+}
+.info-icon {
+    font-size: 1.8rem;
+    color: var(--accent-teal);
+}
+
+.modal-content {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+}
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+
+/* Выпадающее меню при наведении мышки */
+.dropdown:hover .dropdown-menu {
+    display: block;
+    margin-top: 0;
+}
+
+.hover-underline {
+  text-decoration: none;
+}
+
+.hover-underline:hover {
+  text-decoration: underline !important;
+}

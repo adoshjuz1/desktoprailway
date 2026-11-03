@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Секреты и локальные настройки
+.env
+*.local
+
+# Локальные базы и загруженные файлы
+db.sqlite3
+backend/media/
+
+# Node / Vite
+node_modules/
+dist/
+dist-ssr/
+*.log
+npm-debug.log*
+
+# Редакторы и ОС
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
