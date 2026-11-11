@@ -187,6 +187,28 @@ export default function SeatSelectionPage() {
 
   const totalPrice = selectedSeats.length * (activeCarriage?.price || 0);
 
+    const goToBooking = () => {
+    navigate('/booking', {
+      state: {
+        trainId: passedTrain?.id,
+        trainNumber: trainData.number,
+        date: selectedDate,
+        fromCity,
+        toCity,
+        departureTime: trainData.departureTime,
+        departureDate: trainData.departureDate,
+        arrivalTime: trainData.arrivalTime,
+        arrivalDate: trainData.arrivalDate,
+        carriageNumber: activeCarriage?.rawNumber,
+        carriageType: activeCarriage?.type,
+        seats: selectedSeats.map(n => ({
+          number: n,
+          price: seatsMap[n]?.price ?? activeCarriage?.price ?? 0
+        }))
+      }
+    });
+  };
+
   const renderSeatBox = (num) => {
     const seat = seatsMap[num];
     if (!seat) return <div style={{ width: 34, height: 34 }} />;
