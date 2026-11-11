@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from typing import List, Optional
 
 import models
 from database import engine, get_db
@@ -36,6 +37,14 @@ class TrainCreateSmart(BaseModel):
     coupe_price: float = 20000.0        
     platskart_price: float = 10000.0    
 
+class BookingCreate(BaseModel):
+    train_id: int
+    travel_date: str            # "2026-10-14"
+    carriage_number: int
+    seat_numbers: List[int]     # например [5, 6]
+    passenger_name: str
+    passenger_iin: str
+    user_email: Optional[str] = None
 
 def calculate_duration(dep_str: str, arr_str: str, days_in_transit: int = 1) -> str:
     dep_h, dep_m = map(int, dep_str.split(":"))
@@ -253,3 +262,92 @@ def search_trains(from_city: str = "Алматы", to_city: str = "Атырау"
         result.append(train_data)
 
     return result
+
+
+@app.post("/api/bookings", status_code=201, summary="Забронировать места в вагоне")
+def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
+    # 1. Проверяем данные пассажира
+    name = data.passenger_name.strip()
+    iin = data.passenger_iin.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Укажите имя пассажира")
+    if not (iin.isdigit() and len(iin) == 12):
+        raise HTTPException(status_code=400, detail="ИИН должен состоять из 12 цифр")
+
+    seat_numbers = sorted(set(data.seat_numbers))
+    if not seat_numbers:
+        raise HTTPException(status_code=400, detail="Выберите хотя бы одно место")
+
+    try:
+        datetime.strptime(data.travel_date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Дата должна быть в формате ГГГГ-ММ-ДД")
+
+    # 2. Поезд существует и ходит в эту дату
+    train = db.query(models.Train).filter(models.Train.id == data.train_id).first()
+    if not train:
+        raise HTTPException(status_code=404, detail="Поезд не найден")
+    if not train_runs_on_date(train.schedule_days, data.travel_date):
+        raise HTTPException(status_code=400, detail="Поезд не ходит в выбранную дату")
+
+    # 3. Вагон есть в этом поезде
+    carriage = db.query(models.Carriage).filter(
+        models.Carriage.train_id == train.id,
+        models.Carriage.carriage_number == data.carriage_number
+    ).first()
+    if not carriage:
+        raise HTTPException(status_code=404, detail="Вагон не найден")
+
+    # 4. Все выбранные места есть в вагоне
+    seats = db.query(models.Seat).filter(
+        models.Seat.carriage_id == carriage.id,
+        models.Seat.seat_number.in_(seat_numbers)
+    ).all()
+    if len(seats) != len(seat_numbers):
+        raise HTTPException(status_code=400, detail="Некоторых мест нет в этом вагоне")
+
+    # 5. Места не заняты на эту дату (смотрим уже оплаченные брони)
+    existing = db.query(models.Booking).filter(
+        models.Booking.train_id == train.id,
+        models.Booking.travel_date == data.travel_date,
+        models.Booking.carriage_number == data.carriage_number,
+        models.Booking.status == "paid"
+    ).all()
+    taken = set()
+    for b in existing:
+        taken.update(int(x) for x in b.seats_list.split(",") if x.strip().isdigit())
+    conflict = [n for n in seat_numbers if n in taken]
+    if conflict:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Места уже заняты: {', '.join(map(str, conflict))}"
+        )
+
+    # 6. Цену считаем на сервере, а не берём с сайта
+    total_price = sum(s.price for s in seats)
+
+    booking = models.Booking(
+        user_email=data.user_email,
+        train_id=train.id,
+        train_number=train.number,
+        travel_date=data.travel_date,
+        carriage_number=data.carriage_number,
+        passenger_name=name,
+        passenger_iin=iin,
+        seats_list=", ".join(str(n) for n in seat_numbers),
+        total_price=total_price,
+        status="paid"
+    )
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+
+    return {
+        "message": "Билет успешно забронирован!",
+        "booking_id": booking.id,
+        "train_number": train.number,
+        "travel_date": booking.travel_date,
+        "carriage_number": booking.carriage_number,
+        "seats": seat_numbers,
+        "total_price": total_price
+    }
