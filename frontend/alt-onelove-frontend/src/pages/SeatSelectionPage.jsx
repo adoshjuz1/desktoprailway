@@ -130,6 +130,9 @@ export default function SeatSelectionPage() {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [seatFilter, setSeatFilter] = useState('all');
 
+  const [passengerName, setPassengerName] = useState('');
+  const [passengerIin, setPassengerIin] = useState('');
+
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
@@ -463,6 +466,26 @@ export default function SeatSelectionPage() {
             <div className="d-flex justify-content-between align-items-center mb-4 border-top border-secondary pt-3">
               <span className="fw-bold fs-5">Всего</span>
               <span className="fw-bold fs-4" style={{ color: '#0dcaf0' }}>{totalPrice.toLocaleString()} ₸</span>
+            </div>
+            <div className="mb-3">
+              <label className="small text-muted mb-1">Имя и фамилия пассажира</label>
+              <input
+                type="text"
+                className="form-control form-control-sm mb-2"
+                placeholder="Иван Иванов"
+                value={passengerName}
+                onChange={(e) => setPassengerName(e.target.value)}
+              />
+              <label className="small text-muted mb-1">ИИН (12 цифр)</label>
+              <input
+                type="text"
+                className="form-control form-control-sm"
+                placeholder="123456789012"
+                maxLength={12}
+                inputMode="numeric"
+                value={passengerIin}
+                onChange={(e) => setPassengerIin(e.target.value.replace(/\D/g, ''))}
+              />
             </div>
             <button 
               className="btn btn-teal w-100 fw-bold py-2"
