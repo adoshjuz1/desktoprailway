@@ -489,7 +489,7 @@ export default function SeatSelectionPage() {
             <button 
               className="btn btn-teal w-100 fw-bold py-2"
               disabled={selectedSeats.length === 0}
-              onClick={() => alert(`Бронирование успешно! Выбраны места: ${selectedSeats.join(', ')}`)}
+              onClick={goToBooking}
             >
               Продолжить
             </button>
