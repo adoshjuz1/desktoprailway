@@ -130,9 +130,6 @@ export default function SeatSelectionPage() {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [seatFilter, setSeatFilter] = useState('all');
 
-  const [passengerName, setPassengerName] = useState('');
-  const [passengerIin, setPassengerIin] = useState('');
-
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
 
