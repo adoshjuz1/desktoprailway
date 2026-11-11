@@ -78,6 +78,21 @@ def train_runs_on_date(train_schedule: str, date_str: str) -> bool:
         return True
 
 
+def get_taken_seats(db: Session, train_id: int, travel_date: str) -> dict:
+    """Возвращает занятые места на дату: {номер_вагона: {номера_мест}}"""
+    bookings = db.query(models.Booking).filter(
+        models.Booking.train_id == train_id,
+        models.Booking.travel_date == travel_date,
+        models.Booking.status == "paid"
+    ).all()
+
+    taken = {}
+    for b in bookings:
+        seats = taken.setdefault(b.carriage_number, set())
+        seats.update(int(x) for x in b.seats_list.split(",") if x.strip().isdigit())
+    return taken
+
+
 @app.post("/api/trains/create-smart", summary="Создать поезд с раздельными вагонами и местами")
 def create_smart_train(data: TrainCreateSmart, db: Session = Depends(get_db)):
     auto_duration = calculate_duration(data.departure_time, data.arrival_time, data.days_in_transit)
@@ -190,6 +205,8 @@ def search_trains(from_city: str = "Алматы", to_city: str = "Атырау"
         if date and not train_runs_on_date(train.schedule_days, date):
             continue
 
+        taken = get_taken_seats(db, train.id, date) if date else {}
+
         coupe_price = 20000.0
         platskart_price = 10000.0
         coupe_free_count = 0
@@ -197,7 +214,8 @@ def search_trains(from_city: str = "Алматы", to_city: str = "Атырау"
         
         carriages_list = []
         for carriage in train.carriages:
-            free_seats = [s for s in carriage.seats if not s.is_occupied]
+            taken_here = taken.get(carriage.carriage_number, set())
+            free_seats = [s for s in carriage.seats if not s.is_occupied and s.seat_number not in taken_here]
             free_count = len(free_seats)
 
             if carriage.carriage_type == "Купе":
@@ -214,7 +232,7 @@ def search_trains(from_city: str = "Алматы", to_city: str = "Атырау"
                 "type": carriage.carriage_type,
                 "price": carriage.seats[0].price if carriage.seats else (coupe_price if carriage.carriage_type == "Купе" else platskart_price),
                 "seats_left": free_count,
-                "seats": [{"number": s.seat_number, "is_occupied": s.is_occupied, "price": s.price} for s in carriage.seats]
+                "seats": [{"number": s.seat_number, "is_occupied": s.is_occupied or s.seat_number in taken_here, "price": s.price} for s in carriage.seats]
             })
 
         min_price = min([c["price"] for c in carriages_list]) if carriages_list else 0.0
