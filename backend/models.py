@@ -63,11 +63,16 @@ class Booking(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
+    user_email = Column(String, nullable=True, index=True)   # логин из Django, для «Мои билеты»
+    train_id = Column(Integer, ForeignKey("trains.id"), nullable=False)
     train_number = Column(String, nullable=False)
+    travel_date = Column(String, nullable=False)             # дата отправления, например "2026-10-14"
+    carriage_number = Column(Integer, nullable=False)
     passenger_name = Column(String, nullable=False)
     passenger_iin = Column(String, nullable=False)
-    seats_list = Column(String, nullable=False)
+    seats_list = Column(String, nullable=False)              # места через запятую, например "5, 6"
     total_price = Column(Float, nullable=False)
+    status = Column(String, default="paid")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="bookings")
