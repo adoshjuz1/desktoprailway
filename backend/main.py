@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import List, Optional
+import re
 
 import models
 from database import engine, get_db
@@ -37,14 +38,6 @@ class TrainCreateSmart(BaseModel):
     coupe_price: float = 20000.0        
     platskart_price: float = 10000.0    
 
-class BookingCreate(BaseModel):
-    train_id: int
-    travel_date: str            # "2026-10-14"
-    carriage_number: int
-    seat_numbers: List[int]     # например [5, 6]
-    passenger_name: str
-    passenger_iin: str
-    user_email: Optional[str] = None
 
 def calculate_duration(dep_str: str, arr_str: str, days_in_transit: int = 1) -> str:
     dep_h, dep_m = map(int, dep_str.split(":"))
@@ -79,17 +72,20 @@ def train_runs_on_date(train_schedule: str, date_str: str) -> bool:
 
 
 def get_taken_seats(db: Session, train_id: int, travel_date: str) -> dict:
-    """Возвращает занятые места на дату: {номер_вагона: {номера_мест}}"""
-    bookings = db.query(models.Booking).filter(
-        models.Booking.train_id == train_id,
-        models.Booking.travel_date == travel_date,
-        models.Booking.status == "paid"
-    ).all()
-
+    """Занятые места на дату: {номер_вагона: {номера_мест}} (по оплаченным билетам)."""
+    rows = (
+        db.query(models.Booking.carriage_number, models.Ticket.seat_number)
+        .join(models.Ticket, models.Ticket.booking_id == models.Booking.id)
+        .filter(
+            models.Booking.train_id == train_id,
+            models.Booking.travel_date == travel_date,
+            models.Booking.status == "paid",
+        )
+        .all()
+    )
     taken = {}
-    for b in bookings:
-        seats = taken.setdefault(b.carriage_number, set())
-        seats.update(int(x) for x in b.seats_list.split(",") if x.strip().isdigit())
+    for carriage_number, seat_number in rows:
+        taken.setdefault(carriage_number, set()).add(seat_number)
     return taken
 
 
@@ -282,33 +278,72 @@ def search_trains(from_city: str = "Алматы", to_city: str = "Атырау"
     return result
 
 
-@app.post("/api/bookings", status_code=201, summary="Забронировать места в вагоне")
+# ---------- Бронирование ----------
+
+GUARANTEE_RATE = 0.08    # «Гарантия возврата денег» — 8% от стоимости билетов
+FAST_REFUND_RATE = 0.05  # «Быстрый возврат средств» — 5% от стоимости билетов
+
+
+class PassengerIn(BaseModel):
+    seat_number: int
+    passenger_type: str = "Взрослый"
+    first_name: str
+    last_name: str
+    document_type: str = "Удостоверение личности"
+    document_number: str
+    citizenship: str = "Казахстан"
+    iin: str
+
+
+class BookingCreate(BaseModel):
+    train_id: int
+    travel_date: str                 # "2026-10-14"
+    carriage_number: int
+    contact_email: str
+    contact_phone: str
+    passengers: List[PassengerIn]    # по одному пассажиру на каждое место
+    refund_guarantee: bool = False
+    fast_refund: bool = False
+    user_email: Optional[str] = None
+
+
+@app.post("/api/bookings", status_code=201, summary="Оформить заказ: места и данные пассажиров")
 def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
-    # 1. Проверяем данные пассажира
-    name = data.passenger_name.strip()
-    iin = data.passenger_iin.strip()
-    if not name:
-        raise HTTPException(status_code=400, detail="Укажите имя пассажира")
-    if not (iin.isdigit() and len(iin) == 12):
-        raise HTTPException(status_code=400, detail="ИИН должен состоять из 12 цифр")
+    # 1. Контакты
+    email = data.contact_email.strip()
+    phone = data.contact_phone.strip()
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(status_code=400, detail="Некорректная электронная почта")
+    if not 10 <= len(re.sub(r"\D", "", phone)) <= 15:
+        raise HTTPException(status_code=400, detail="Некорректный номер телефона")
 
-    seat_numbers = sorted(set(data.seat_numbers))
-    if not seat_numbers:
+    # 2. Пассажиры
+    if not data.passengers:
         raise HTTPException(status_code=400, detail="Выберите хотя бы одно место")
+    seat_numbers = [p.seat_number for p in data.passengers]
+    if len(set(seat_numbers)) != len(seat_numbers):
+        raise HTTPException(status_code=400, detail="Одно место выбрано дважды")
+    for p in data.passengers:
+        if not p.first_name.strip() or not p.last_name.strip():
+            raise HTTPException(status_code=400, detail=f"Место {p.seat_number}: укажите имя и фамилию")
+        if not p.document_number.strip():
+            raise HTTPException(status_code=400, detail=f"Место {p.seat_number}: укажите номер документа")
+        if not (p.iin.strip().isdigit() and len(p.iin.strip()) == 12):
+            raise HTTPException(status_code=400, detail=f"Место {p.seat_number}: ИИН должен состоять из 12 цифр")
 
+    # 3. Дата
     try:
         datetime.strptime(data.travel_date, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="Дата должна быть в формате ГГГГ-ММ-ДД")
 
-    # 2. Поезд существует и ходит в эту дату
+    # 4. Поезд и вагон
     train = db.query(models.Train).filter(models.Train.id == data.train_id).first()
     if not train:
         raise HTTPException(status_code=404, detail="Поезд не найден")
     if not train_runs_on_date(train.schedule_days, data.travel_date):
         raise HTTPException(status_code=400, detail="Поезд не ходит в выбранную дату")
 
-    # 3. Вагон есть в этом поезде
     carriage = db.query(models.Carriage).filter(
         models.Carriage.train_id == train.id,
         models.Carriage.carriage_number == data.carriage_number
@@ -316,56 +351,79 @@ def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
     if not carriage:
         raise HTTPException(status_code=404, detail="Вагон не найден")
 
-    # 4. Все выбранные места есть в вагоне
+    # 5. Места существуют и свободны на эту дату
     seats = db.query(models.Seat).filter(
         models.Seat.carriage_id == carriage.id,
         models.Seat.seat_number.in_(seat_numbers)
     ).all()
     if len(seats) != len(seat_numbers):
         raise HTTPException(status_code=400, detail="Некоторых мест нет в этом вагоне")
+    seat_by_number = {s.seat_number: s for s in seats}
 
-    # 5. Места не заняты на эту дату (смотрим уже оплаченные брони)
-    existing = db.query(models.Booking).filter(
-        models.Booking.train_id == train.id,
-        models.Booking.travel_date == data.travel_date,
-        models.Booking.carriage_number == data.carriage_number,
-        models.Booking.status == "paid"
-    ).all()
-    taken = set()
-    for b in existing:
-        taken.update(int(x) for x in b.seats_list.split(",") if x.strip().isdigit())
-    conflict = [n for n in seat_numbers if n in taken]
+    taken = get_taken_seats(db, train.id, data.travel_date).get(data.carriage_number, set())
+    conflict = [n for n in seat_numbers if n in taken or seat_by_number[n].is_occupied]
     if conflict:
         raise HTTPException(
             status_code=409,
-            detail=f"Места уже заняты: {', '.join(map(str, conflict))}"
+            detail=f"Места уже заняты: {', '.join(map(str, sorted(conflict)))}"
         )
 
-    # 6. Цену считаем на сервере, а не берём с сайта
-    total_price = sum(s.price for s in seats)
+    # 6. Цены считает сервер
+    tickets_price = sum(seat_by_number[n].price for n in seat_numbers)
+    extras_price = 0
+    if data.refund_guarantee:
+        extras_price += int(tickets_price * GUARANTEE_RATE + 0.5)
+    if data.fast_refund:
+        extras_price += int(tickets_price * FAST_REFUND_RATE + 0.5)
+    total_price = tickets_price + extras_price
 
+    # 7. Сохраняем заказ и билеты одной транзакцией
     booking = models.Booking(
         user_email=data.user_email,
+        contact_email=email,
+        contact_phone=phone,
         train_id=train.id,
         train_number=train.number,
         travel_date=data.travel_date,
         carriage_number=data.carriage_number,
-        passenger_name=name,
-        passenger_iin=iin,
-        seats_list=", ".join(str(n) for n in seat_numbers),
+        tickets_price=tickets_price,
+        extras_price=extras_price,
         total_price=total_price,
-        status="paid"
+        refund_guarantee=data.refund_guarantee,
+        fast_refund=data.fast_refund,
+        status="paid",
     )
+    for p in data.passengers:
+        booking.tickets.append(models.Ticket(
+            seat_number=p.seat_number,
+            price=seat_by_number[p.seat_number].price,
+            passenger_type=p.passenger_type,
+            first_name=p.first_name.strip(),
+            last_name=p.last_name.strip(),
+            document_type=p.document_type,
+            document_number=p.document_number.strip(),
+            citizenship=p.citizenship.strip() or "Казахстан",
+            iin=p.iin.strip(),
+        ))
     db.add(booking)
     db.commit()
     db.refresh(booking)
 
     return {
-        "message": "Билет успешно забронирован!",
+        "message": "Заказ успешно оформлен!",
         "booking_id": booking.id,
         "train_number": train.number,
         "travel_date": booking.travel_date,
         "carriage_number": booking.carriage_number,
-        "seats": seat_numbers,
-        "total_price": total_price
+        "tickets_price": tickets_price,
+        "extras_price": extras_price,
+        "total_price": total_price,
+        "tickets": [
+            {
+                "seat_number": t.seat_number,
+                "passenger": f"{t.last_name} {t.first_name}",
+                "price": t.price,
+            }
+            for t in booking.tickets
+        ],
     }

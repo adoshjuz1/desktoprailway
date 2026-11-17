@@ -59,20 +59,44 @@ class Seat(Base):
 
 
 class Booking(Base):
+    """Заказ: один заказ может содержать несколько билетов (по одному на пассажира)."""
     __tablename__ = "bookings"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     user_email = Column(String, nullable=True, index=True)   # логин из Django, для «Мои билеты»
+    contact_email = Column(String, nullable=False)           # куда отправить билет
+    contact_phone = Column(String, nullable=False)           # куда сообщить об изменениях
     train_id = Column(Integer, ForeignKey("trains.id"), nullable=False)
     train_number = Column(String, nullable=False)
     travel_date = Column(String, nullable=False)             # дата отправления, например "2026-10-14"
     carriage_number = Column(Integer, nullable=False)
-    passenger_name = Column(String, nullable=False)
-    passenger_iin = Column(String, nullable=False)
-    seats_list = Column(String, nullable=False)              # места через запятую, например "5, 6"
-    total_price = Column(Float, nullable=False)
+    tickets_price = Column(Float, nullable=False)            # сумма за места
+    extras_price = Column(Float, default=0)                  # допуслуги
+    total_price = Column(Float, nullable=False)              # итого
+    refund_guarantee = Column(Boolean, default=False)        # «Гарантия возврата денег»
+    fast_refund = Column(Boolean, default=False)             # «Быстрый возврат средств»
     status = Column(String, default="paid")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="bookings")
+    tickets = relationship("Ticket", back_populates="booking", cascade="all, delete-orphan")
+
+
+class Ticket(Base):
+    """Билет: одно место и один пассажир."""
+    __tablename__ = "tickets"
+
+    id = Column(Integer, primary_key=True, index=True)
+    booking_id = Column(Integer, ForeignKey("bookings.id"), nullable=False)
+    seat_number = Column(Integer, nullable=False)
+    price = Column(Float, nullable=False)
+    passenger_type = Column(String, default="Взрослый")
+    first_name = Column(String, nullable=False)
+    last_name = Column(String, nullable=False)
+    document_type = Column(String, nullable=False)
+    document_number = Column(String, nullable=False)
+    citizenship = Column(String, default="Казахстан")
+    iin = Column(String, nullable=False)
+
+    booking = relationship("Booking", back_populates="tickets")
