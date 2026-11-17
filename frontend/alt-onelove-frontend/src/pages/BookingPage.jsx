@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000';
 const GUARANTEE_RATE = 0.08;    // как на сервере: «Гарантия возврата денег»
 const FAST_REFUND_RATE = 0.05;  // как на сервере: «Быстрый возврат средств»
 const DOC_TYPES = ['Удостоверение личности', 'Паспорт', 'Свидетельство о рождении'];
@@ -72,9 +71,6 @@ export default function BookingPage() {
   const [refundGuarantee, setRefundGuarantee] = useState(false);
   const [fastRefund, setFastRefund] = useState(false);
   const [errors, setErrors] = useState({});
-  const [apiError, setApiError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [created, setCreated] = useState(null);
 
   // Если страницу открыли напрямую, без выбора мест
   if (!order || !order.seats || order.seats.length === 0) {
@@ -108,87 +104,30 @@ export default function BookingPage() {
     return e;
   };
 
-  const handleSubmit = async () => {
-    setApiError('');
+  // Переход на страницу оплаты — заказ создаётся уже там
+  const handleSubmit = () => {
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
-    setSubmitting(true);
-    try {
-      const response = await axios.post(`${API_URL}/api/bookings`, {
-        train_id: order.trainId,
-        travel_date: order.date,
-        carriage_number: order.carriageNumber,
-        contact_email: email.trim(),
-        contact_phone: `+7${phone}`,
-        passengers: passengers.map(p => ({
-          seat_number: p.seatNumber,
-          first_name: p.firstName.trim(),
-          last_name: p.lastName.trim(),
-          document_type: p.documentType,
-          document_number: p.documentNumber.trim(),
-          citizenship: p.citizenship.trim() || 'Казахстан',
-          iin: p.iin
-        })),
-        refund_guarantee: refundGuarantee,
-        fast_refund: fastRefund,
-        user_email: userLogin
-      });
-      setCreated(response.data);
-    } catch (err) {
-      const detail = err.response?.data?.detail;
-      if (typeof detail === 'string') setApiError(detail);
-      else if (Array.isArray(detail)) setApiError('Проверьте правильность заполнения всех полей.');
-      else setApiError('Не удалось связаться с сервером. Попробуйте ещё раз.');
-    } finally {
-      setSubmitting(false);
-    }
+    navigate('/payment', {
+      state: {
+        order,
+        passengers,
+        email: email.trim(),
+        phone,
+        refundGuarantee,
+        fastRefund,
+        ticketsTotal,
+        guaranteePrice,
+        fastRefundPrice,
+        total,
+        userLogin,
+      },
+    });
   };
 
   const inputClass = (key) => `form-control ${errors[key] ? 'is-invalid' : ''}`;
-
-  // ---------- Экран «Ваш заказ» ----------
-  if (created) {
-    return (
-      <div className="container my-5" style={{ maxWidth: '760px' }}>
-        <div className="card p-4 p-md-5 border rounded-4 shadow-sm" style={cardStyle}>
-          <div className="text-center mb-4">
-            <i className="bi bi-check-circle-fill" style={{ fontSize: '3rem', color: 'var(--accent-teal)' }}></i>
-            <h2 className="fw-bold mt-2">Заказ №{created.booking_id} оформлен</h2>
-            <p className="text-muted mb-0">Электронные билеты отправим на {email}</p>
-          </div>
-
-          <div className="border rounded-3 p-3 mb-3" style={{ borderColor: 'var(--border-color)' }}>
-            <div className="fw-bold">{order.fromCity} → {order.toCity}</div>
-            <div className="small text-muted">
-              Поезд {created.train_number}, вагон {created.carriage_number} ({order.carriageType}) · {order.departureDate}, {order.departureTime}
-            </div>
-          </div>
-
-          {created.tickets.map(t => (
-            <div key={t.seat_number} className="d-flex justify-content-between border-bottom py-2" style={{ borderColor: 'var(--border-color)' }}>
-              <span>Место {t.seat_number} · {t.passenger}</span>
-              <span className="fw-semibold">{money(t.price)}</span>
-            </div>
-          ))}
-          {created.extras_price > 0 && (
-            <div className="d-flex justify-content-between py-2 text-muted">
-              <span>Дополнительные услуги</span><span>{money(created.extras_price)}</span>
-            </div>
-          )}
-          <div className="d-flex justify-content-between fs-5 fw-bold pt-3">
-            <span>Итого</span><span>{money(created.total_price)}</span>
-          </div>
-
-          <div className="alert alert-info small mt-4 mb-3">
-            В учебной версии оплата имитируется: заказ сохраняется как оплаченный без списания денег.
-          </div>
-          <button className="btn btn-teal w-100 py-2" onClick={() => navigate('/')}>На главную</button>
-        </div>
-      </div>
-    );
-  }
 
   // ---------- Страница бронирования ----------
   return (
@@ -299,14 +238,13 @@ export default function BookingPage() {
           {Object.keys(errors).length > 0 && (
             <div className="alert alert-danger">Проверьте поля, отмеченные красным.</div>
           )}
-          {apiError && <div className="alert alert-danger">{apiError}</div>}
 
           <div className="d-flex justify-content-between align-items-center gap-3 flex-wrap">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate(-1)}>
               <i className="bi bi-arrow-left me-1"></i>Назад к выбору мест
             </button>
-            <button type="button" className="btn btn-teal px-4 py-2" disabled={submitting} onClick={handleSubmit}>
-              {submitting ? 'Оформляем...' : 'Перейти к оплате'}
+            <button type="button" className="btn btn-teal px-4 py-2" onClick={handleSubmit}>
+              Перейти к оплате
             </button>
           </div>
         </div>
