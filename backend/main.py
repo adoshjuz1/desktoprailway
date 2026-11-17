@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -427,3 +427,43 @@ def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
             for t in booking.tickets
         ],
     }
+
+@app.get("/api/bookings", summary="Список заказов пользователя по email")
+def list_bookings(user_email: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    if not user_email or not user_email.strip():
+        raise HTTPException(status_code=400, detail="Укажите user_email")
+
+    rows = (
+        db.query(models.Booking)
+        .filter(models.Booking.user_email == user_email.strip())
+        .order_by(models.Booking.created_at.desc())
+        .all()
+    )
+
+    result = []
+    for b in rows:
+        train = db.query(models.Train).filter(models.Train.id == b.train_id).first()
+        result.append({
+            "booking_id": b.id,
+            "status": b.status,
+            "train_number": b.train_number,
+            "from_city": train.from_city if train else "",
+            "to_city": train.to_city if train else "",
+            "travel_date": b.travel_date,
+            "departure_time": train.departure_time if train else "",
+            "carriage_number": b.carriage_number,
+            "tickets_price": b.tickets_price,
+            "extras_price": b.extras_price,
+            "total_price": b.total_price,
+            "passengers_count": len(b.tickets),
+            "tickets": [
+                {
+                    "seat_number": t.seat_number,
+                    "passenger": f"{t.last_name} {t.first_name}",
+                    "price": t.price,
+                }
+                for t in b.tickets
+            ],
+            "created_at": b.created_at.isoformat() if b.created_at else None,
+        })
+    return result
