@@ -209,22 +209,18 @@ function Navigation() {
                       </button>
                     </div>
 
-                    {/* Блок заказов */}
-                    <div className="mb-3">
-                      <div className="fw-bold small mb-2 text-white-50">Мои заказы</div>
-                      <div className="p-3 text-center rounded-3" style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px dashed rgba(255,255,255,0.2)', fontSize: '12px', color: '#cbd5e1' }}>
-                        У вас пока нет активных билетов
-                      </div>
+                    {/* Мои заказы */}
+                    <div className="mb-2">
+                      <div className="fw-bold small mb-1 text-white-50 px-1">Мои заказы</div>
+                      <Link to="/my-tickets" className="profile-link" onClick={() => setProfileOpen(false)}>
+                        <i className="bi bi-train-front" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Ж/Д билеты
+                      </Link>
                     </div>
 
                     <div className="border-bottom border-white-50 mb-2" style={{ opacity: 0.3 }}></div>
 
-                    {/* Разделы меню */}
+                    {/* Остальные разделы */}
                     <div className="d-flex flex-column gap-1">
-                      <Link to="/my-tickets" className="profile-link" onClick={() => setProfileOpen(false)}>
-                        <i className="bi bi-train-front" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Ж/Д билеты
-                      </Link>
-
                       <Link to="/insurance" className="profile-link" onClick={() => setProfileOpen(false)}>
                         <i className="bi bi-shield-check" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Страховки
                       </Link>
