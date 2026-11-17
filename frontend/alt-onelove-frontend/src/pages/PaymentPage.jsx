@@ -82,7 +82,6 @@ export default function PaymentPage() {
   const [secondsLeft, setSecondsLeft] = useState(35 * 60); // 35 минут
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
-  const [created, setCreated] = useState(null);
   const [cardErrors, setCardErrors] = useState({});
 
   const timerRef = useRef(null);
@@ -161,8 +160,16 @@ export default function PaymentPage() {
         fast_refund: fastRefund,
         user_email: userLogin || null,
       });
-      setCreated(response.data);
       clearInterval(timerRef.current);
+      navigate('/order-success', {
+        state: {
+          booking: response.data,
+          order,
+          email: email.trim(),
+          total,
+        },
+        replace: true,
+      });
     } catch (err) {
       const detail = err.response?.data?.detail;
       if (typeof detail === 'string') setApiError(detail);
@@ -172,65 +179,6 @@ export default function PaymentPage() {
       setSubmitting(false);
     }
   };
-
-  // ---------- Экран «Ваш заказ» после успешной оплаты ----------
-  if (created) {
-    return (
-      <div className="container my-5" style={{ maxWidth: '760px' }}>
-        <Steps />
-        <div className="card p-4 p-md-5 border rounded-4 shadow-sm" style={cardStyle}>
-          <div className="text-center mb-4">
-            <i
-              className="bi bi-check-circle-fill"
-              style={{ fontSize: '3rem', color: 'var(--accent-teal)' }}
-            ></i>
-            <h2 className="fw-bold mt-2">Заказ №{created.booking_id} оплачен</h2>
-            <p className="text-muted mb-0">
-              Электронные билеты отправлены на {email}
-            </p>
-          </div>
-
-          <div className="rounded-3 p-3 mb-4" style={{ background: 'var(--bg-light)' }}>
-            <div className="d-flex justify-content-between mb-2">
-              <span className="text-muted">Маршрут</span>
-              <span className="fw-semibold">
-                {order.fromCity} → {order.toCity}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between mb-2">
-              <span className="text-muted">Поезд</span>
-              <span>
-                {order.trainNumber} · вагон {order.carriageNumber}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between mb-2">
-              <span className="text-muted">Дата</span>
-              <span>
-                {order.departureDate}, {order.departureTime}
-              </span>
-            </div>
-            <div className="d-flex justify-content-between">
-              <span className="text-muted">Сумма</span>
-              <span className="fw-bold">{money(total)}</span>
-            </div>
-          </div>
-
-          <div className="d-flex flex-wrap gap-2 justify-content-center">
-            <Link to="/" className="btn btn-teal px-4">
-              На главную
-            </Link>
-            <button
-              type="button"
-              className="btn btn-outline-secondary"
-              onClick={() => navigate('/my-tickets')}
-            >
-              Мои билеты
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // ---------- Форма оплаты ----------
   return (
@@ -484,12 +432,8 @@ export default function PaymentPage() {
             </button>
             <button
               type="button"
-              className="btn px-4 py-2 fw-semibold text-white"
-              style={{
-                background: '#E91E8C',
-                border: 'none',
-                minWidth: 200,
-              }}
+              className="btn btn-teal px-4 py-2 fw-semibold"
+              style={{ minWidth: 200 }}
               disabled={submitting || secondsLeft <= 0}
               onClick={handlePay}
             >
