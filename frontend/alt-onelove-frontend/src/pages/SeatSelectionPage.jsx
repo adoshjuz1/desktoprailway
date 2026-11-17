@@ -187,7 +187,7 @@ export default function SeatSelectionPage() {
 
   const totalPrice = selectedSeats.length * (activeCarriage?.price || 0);
 
-    const goToBooking = () => {
+  const goToBooking = () => {
     navigate('/booking', {
       state: {
         trainId: passedTrain?.id,

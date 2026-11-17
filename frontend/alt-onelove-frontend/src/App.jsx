@@ -7,6 +7,7 @@ import SeatSelectionPage from './pages/SeatSelectionPage';
 import KtzNewsPage from './pages/KtzNewsPage';
 import UniNewsPage from './pages/UniNewsPage';
 import PostDetailPage from './pages/PostDetailPage';
+import BookingPage from './pages/BookingPage';
 
 function Navigation() {
   const [lang, setLang] = useState(localStorage.getItem('selected_lang') || 'ru');
@@ -492,6 +493,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/search" element={<SearchResultsPage />} />
           <Route path="/seats" element={<SeatSelectionPage />} />
+          <Route path="/booking" element={<BookingPage />} />
           <Route path="/ktz-news" element={<KtzNewsPage />} />
           <Route path="/uni-news" element={<UniNewsPage />} />
           <Route path="/post/:id" element={<PostDetailPage />} />
