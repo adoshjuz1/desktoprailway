@@ -10,6 +10,13 @@ import PostDetailPage from './pages/PostDetailPage';
 import BookingPage from './pages/BookingPage';
 import PaymentPage from './pages/PaymentPage';
 import OrderSuccessPage from './pages/OrderSuccessPage';
+import ProfileLayout from './pages/ProfileLayout';
+import Mytickets from './pages/Mytickets';
+import InsurancePage from './pages/InsurancePage';
+import SavedPassengersPage from './pages/SavedPassengersPage';
+import LoyaltyPage from './pages/LoyaltyPage';
+import PaymentCardsPage from './pages/PaymentCardsPage';
+import Profilesettings from './pages/Profilesettings';
 
 function Navigation() {
   const [lang, setLang] = useState(localStorage.getItem('selected_lang') || 'ru');
@@ -215,19 +222,27 @@ function Navigation() {
                     {/* Разделы меню */}
                     <div className="d-flex flex-column gap-1">
                       <Link to="/my-tickets" className="profile-link" onClick={() => setProfileOpen(false)}>
-                        <i className="bi bi-ticket-perforated" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Мои билеты / покупки
+                        <i className="bi bi-train-front" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Ж/Д билеты
                       </Link>
 
-                      <Link to="/favorites" className="profile-link" onClick={() => setProfileOpen(false)}>
-                        <i className="bi bi-star text-warning"></i> Избранные маршруты
+                      <Link to="/insurance" className="profile-link" onClick={() => setProfileOpen(false)}>
+                        <i className="bi bi-shield-check" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Страховки
                       </Link>
 
-                      <Link to="/notifications" className="profile-link" onClick={() => setProfileOpen(false)}>
-                        <i className="bi bi-bell text-info"></i> Уведомления
+                      <Link to="/saved-passengers" className="profile-link" onClick={() => setProfileOpen(false)}>
+                        <i className="bi bi-people" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Сохранённые пассажиры
+                      </Link>
+
+                      <Link to="/loyalty" className="profile-link" onClick={() => setProfileOpen(false)}>
+                        <i className="bi bi-gift" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Программы лояльности
+                      </Link>
+
+                      <Link to="/payment-cards" className="profile-link" onClick={() => setProfileOpen(false)}>
+                        <i className="bi bi-credit-card" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Мои платёжные карты
                       </Link>
 
                       <Link to="/profile-settings" className="profile-link" onClick={() => setProfileOpen(false)}>
-                        <i className="bi bi-gear text-light opacity-75"></i> Настройка профиля
+                        <i className="bi bi-gear" style={{ color: 'var(--accent-teal, #00B4D8)' }}></i> Настройка профиля
                       </Link>
 
                       {currentUser.is_staff && (
@@ -501,6 +516,15 @@ export default function App() {
           <Route path="/ktz-news" element={<KtzNewsPage />} />
           <Route path="/uni-news" element={<UniNewsPage />} />
           <Route path="/post/:id" element={<PostDetailPage />} />
+
+          <Route element={<ProfileLayout />}>
+            <Route path="/my-tickets" element={<Mytickets />} />
+            <Route path="/insurance" element={<InsurancePage />} />
+            <Route path="/saved-passengers" element={<SavedPassengersPage />} />
+            <Route path="/loyalty" element={<LoyaltyPage />} />
+            <Route path="/payment-cards" element={<PaymentCardsPage />} />
+            <Route path="/profile-settings" element={<Profilesettings />} />
+          </Route>
         </Routes>
 
         <GlobalAuthModal />
