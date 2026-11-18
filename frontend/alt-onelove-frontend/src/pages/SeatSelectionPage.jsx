@@ -222,16 +222,16 @@ export default function SeatSelectionPage() {
       return (
         <div 
           className="d-flex flex-column align-items-center justify-content-center rounded" 
-          style={{ width: 34, height: 34, backgroundColor: '#212529', opacity: 0.3, fontSize: '11px', color: '#6c757d' }}
+          style={{ width: 34, height: 34, backgroundColor: 'var(--border-color)', opacity: 0.5, fontSize: '11px', color: 'var(--text-color)' }}
         >
           {num}
         </div>
       );
     }
 
-    let bg = '#174ea6'; 
-    if (isOccupied) bg = '#495057';
-    if (isSelected) bg = '#e83e8c'; 
+    let bg = 'var(--seat-free)'; 
+    if (isOccupied) bg = 'var(--seat-busy)';
+    if (isSelected) bg = 'var(--seat-selected)'; 
 
     return (
       <div 
@@ -245,10 +245,10 @@ export default function SeatSelectionPage() {
           fontSize: '11px',
           fontWeight: 'bold',
           opacity: isOccupied ? 0.4 : 1,
-          border: isSelected ? '2px solid #fff' : 'none'
+          border: isSelected ? '2px solid var(--text-color)' : 'none'
         }}
       >
-        <span style={{ borderBottom: isBottom ? '1px solid #9ec5fe' : 'none', paddingBottom: '1px' }}>
+        <span style={{ borderBottom: isBottom ? '1px solid rgba(255, 255, 255, 0.7)' : 'none', paddingBottom: '1px' }}>
           {num}
         </span>
       </div>
@@ -256,7 +256,7 @@ export default function SeatSelectionPage() {
   };
 
   return (
-    <div className="container-fluid py-4 px-md-5" style={{ backgroundColor: '#12151c', minHeight: '100vh', color: '#fff' }}>
+    <div className="container-fluid py-4 px-md-5" style={{ color: 'var(--text-color)' }}>
       
       <div className="container mb-3 px-0">
         <Steps current={1} className="mb-0" onStepClick={(i) => navigate(i - 1)} />
@@ -267,7 +267,7 @@ export default function SeatSelectionPage() {
         <div className="col-lg-9">
           
           {/* ШАПКА РЕЙСА */}
-          <div className="p-4 rounded-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ backgroundColor: '#1a1d26' }}>
+          <div className="p-4 rounded-3 mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
             
             {/* Блок рейса (слева) */}
             <div className="d-flex align-items-start gap-4">
@@ -285,7 +285,7 @@ export default function SeatSelectionPage() {
               {/* Линия длительности */}
               <div className="text-center px-3 d-flex flex-column align-items-center justify-content-center pt-3">
                 <div className="small text-muted mb-1">{trainData.duration}</div>
-                <div style={{ height: '2px', backgroundColor: '#3b4252', width: '100px' }}></div>
+                <div style={{ height: '2px', backgroundColor: 'var(--border-color)', width: '100px' }}></div>
               </div>
 
               {/* Прибытие */}
@@ -301,30 +301,30 @@ export default function SeatSelectionPage() {
             <div className="d-flex gap-2">
               <div 
                 onClick={() => handleCarriageTypeChange('coupe')}
-                className={`p-3 rounded-3 cursor-pointer text-center border ${selectedCarriageType === 'coupe' ? '' : 'border-secondary'}`}
+                className={`p-3 rounded-3 cursor-pointer text-center border `}
                 style={{ 
-                  backgroundColor: selectedCarriageType === 'coupe' ? '#172228' : '#141720', 
-                  borderColor: selectedCarriageType === 'coupe' ? '#0dcaf0' : undefined,
+                  backgroundColor: selectedCarriageType === 'coupe' ? 'var(--accent-soft)' : 'var(--card-inset)', 
+                  borderColor: selectedCarriageType === 'coupe' ? 'var(--accent-teal)' : 'var(--border-color)',
                   minWidth: '140px' 
                 }}
               >
                 <div className="fw-bold small">Купе</div>
                 <div className="small text-muted">{trainData.coupeSeatsTotal} мест</div>
-                <div className="fw-bold mt-1" style={{ color: '#0dcaf0' }}>{trainData.coupePrice.toLocaleString()} ₸</div>
+                <div className="fw-bold mt-1" style={{ color: 'var(--accent-teal)' }}>{trainData.coupePrice.toLocaleString()} ₸</div>
               </div>
 
               <div 
                 onClick={() => handleCarriageTypeChange('platskart')}
-                className={`p-3 rounded-3 cursor-pointer text-center border ${selectedCarriageType === 'platskart' ? '' : 'border-secondary'}`}
+                className={`p-3 rounded-3 cursor-pointer text-center border `}
                 style={{ 
-                  backgroundColor: selectedCarriageType === 'platskart' ? '#172228' : '#141720', 
-                  borderColor: selectedCarriageType === 'platskart' ? '#0dcaf0' : undefined,
+                  backgroundColor: selectedCarriageType === 'platskart' ? 'var(--accent-soft)' : 'var(--card-inset)', 
+                  borderColor: selectedCarriageType === 'platskart' ? 'var(--accent-teal)' : 'var(--border-color)',
                   minWidth: '140px' 
                 }}
               >
                 <div className="fw-bold small">Плацкарт</div>
                 <div className="small text-muted">{trainData.platskartSeatsTotal} мест</div>
-                <div className="fw-bold mt-1" style={{ color: '#0dcaf0' }}>{trainData.platskartPrice.toLocaleString()} ₸</div>
+                <div className="fw-bold mt-1" style={{ color: 'var(--accent-teal)' }}>{trainData.platskartPrice.toLocaleString()} ₸</div>
               </div>
             </div>
 
@@ -337,7 +337,7 @@ export default function SeatSelectionPage() {
               <button 
                 onClick={() => scrollCarriages('left')}
                 className="btn position-absolute top-50 start-0 translate-middle-y z-3 d-flex align-items-center justify-content-center shadow"
-                style={{ width: '36px', height: '36px', backgroundColor: 'rgba(26, 29, 38, 0.9)', border: '1px solid #444', color: '#fff', borderRadius: '50%', marginLeft: '-12px' }}
+                style={{ width: '36px', height: '36px', backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '50%', marginLeft: '-12px' }}
               >
                 ‹
               </button>
@@ -355,16 +355,16 @@ export default function SeatSelectionPage() {
                   <div 
                     key={idx} 
                     onClick={() => { setActiveCarriage(car); setSelectedSeats([]); }}
-                    className={`p-3 rounded-3 cursor-pointer border flex-shrink-0 ${isActive ? '' : 'border-secondary'}`}
+                    className={`p-3 rounded-3 cursor-pointer border flex-shrink-0 `}
                     style={{ 
-                      backgroundColor: isActive ? '#172228' : '#1a1d26', 
-                      borderColor: isActive ? '#0dcaf0' : undefined,
+                      backgroundColor: isActive ? 'var(--accent-soft)' : 'var(--card-bg)', 
+                      borderColor: isActive ? 'var(--accent-teal)' : 'var(--border-color)',
                       minWidth: '155px' 
                     }}
                   >
                     <div className="d-flex justify-content-between align-items-center mb-1 gap-2">
                       <span className="fw-bold text-nowrap">{car.number}</span>
-                      <span className="fw-bold text-nowrap" style={{ color: '#0dcaf0' }}>{car.price.toLocaleString()} ₸</span>
+                      <span className="fw-bold text-nowrap" style={{ color: 'var(--accent-teal)' }}>{car.price.toLocaleString()} ₸</span>
                     </div>
                     <div className="small text-muted">{car.seatsLeft} мест</div>
                   </div>
@@ -376,7 +376,7 @@ export default function SeatSelectionPage() {
               <button 
                 onClick={() => scrollCarriages('right')}
                 className="btn position-absolute top-50 end-0 translate-middle-y z-3 d-flex align-items-center justify-content-center shadow"
-                style={{ width: '36px', height: '36px', backgroundColor: 'rgba(26, 29, 38, 0.9)', border: '1px solid #444', color: '#fff', borderRadius: '50%', marginRight: '-12px' }}
+                style={{ width: '36px', height: '36px', backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', color: 'var(--text-color)', borderRadius: '50%', marginRight: '-12px' }}
               >
                 ›
               </button>
@@ -384,28 +384,28 @@ export default function SeatSelectionPage() {
           </div>
 
           {/* ИНТЕРАКТИВНАЯ СХЕМА МЕСТ */}
-          <div className="p-4 rounded-3" style={{ backgroundColor: '#1a1d26' }}>
+          <div className="p-4 rounded-3" style={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)' }}>
             <h5 className="fw-bold mb-3">Выберите места ({activeCarriage?.number || 'Вагон'})</h5>
 
             <div className="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
               <div className="btn-group" role="group">
-                <button className={`btn btn-sm ${seatFilter === 'all' ? 'btn-dark text-white border-secondary' : 'btn-outline-secondary'}`} onClick={() => setSeatFilter('all')}>Все</button>
-                <button className={`btn btn-sm ${seatFilter === 'bottom' ? 'btn-dark text-white border-secondary' : 'btn-outline-secondary'}`} onClick={() => setSeatFilter('bottom')}>Только нижние</button>
+                <button className={`btn btn-sm ${seatFilter === 'all' ? 'btn-teal' : 'btn-outline-secondary'}`} onClick={() => setSeatFilter('all')}>Все</button>
+                <button className={`btn btn-sm ${seatFilter === 'bottom' ? 'btn-teal' : 'btn-outline-secondary'}`} onClick={() => setSeatFilter('bottom')}>Только нижние</button>
               </div>
 
               <div className="d-flex align-items-center gap-3 small text-muted">
-                <span className="d-flex align-items-center gap-1"><span style={{ width: 12, height: 12, backgroundColor: '#174ea6', borderRadius: 2 }}></span> Доступные</span>
-                <span className="d-flex align-items-center gap-1"><span style={{ width: 12, height: 12, backgroundColor: '#e83e8c', borderRadius: 2 }}></span> Выбранные</span>
-                <span className="d-flex align-items-center gap-1"><span style={{ width: 12, height: 12, backgroundColor: '#495057', borderRadius: 2 }}></span> Недоступные</span>
+                <span className="d-flex align-items-center gap-1"><span style={{ width: 12, height: 12, backgroundColor: 'var(--seat-free)', borderRadius: 2 }}></span> Доступные</span>
+                <span className="d-flex align-items-center gap-1"><span style={{ width: 12, height: 12, backgroundColor: 'var(--seat-selected)', borderRadius: 2 }}></span> Выбранные</span>
+                <span className="d-flex align-items-center gap-1"><span style={{ width: 12, height: 12, backgroundColor: 'var(--seat-busy)', borderRadius: 2 }}></span> Недоступные</span>
               </div>
             </div>
 
             {/* ВАГОННЫЙ БЛОК */}
-            <div className="p-4 rounded-3 border border-secondary" style={{ backgroundColor: '#1b1f28' }}>
+            <div className="p-4 rounded-3 border border-soft" style={{ backgroundColor: 'var(--card-bg)' }}>
               <div className="d-flex align-items-center justify-content-between w-100">
                 
                 {/* Левый тамбур */}
-                <div className="d-flex gap-1 p-1 rounded border border-secondary align-items-center justify-content-center" style={{ backgroundColor: '#141720', height: '76px', padding: '0 6px' }}>
+                <div className="d-flex gap-1 p-1 rounded border border-soft align-items-center justify-content-center" style={{ backgroundColor: 'var(--card-inset)', height: '76px', padding: '0 6px' }}>
                   <div className="text-muted" title="Санузел" style={{ fontSize: '15px' }}>🚻</div>
                   <div className="text-muted" title="Проводник" style={{ fontSize: '15px' }}>👨‍✈️</div>
                 </div>
@@ -419,7 +419,7 @@ export default function SeatSelectionPage() {
                     const botSeat2 = secIdx * 4 + 3;
 
                     return (
-                      <div key={secIdx} className="d-flex flex-column gap-1 p-1 rounded border border-secondary" style={{ backgroundColor: '#141720' }}>
+                      <div key={secIdx} className="d-flex flex-column gap-1 p-1 rounded border border-soft" style={{ backgroundColor: 'var(--card-inset)' }}>
                         <div className="d-flex gap-1">
                           {renderSeatBox(topSeat1)}
                           {renderSeatBox(topSeat2)}
@@ -434,7 +434,7 @@ export default function SeatSelectionPage() {
                 </div>
 
                 {/* Правый тамбур */}
-                <div className="d-flex gap-1 p-1 rounded border border-secondary align-items-center justify-content-center" style={{ backgroundColor: '#141720', height: '76px', padding: '0 8px' }}>
+                <div className="d-flex gap-1 p-1 rounded border border-soft align-items-center justify-content-center" style={{ backgroundColor: 'var(--card-inset)', height: '76px', padding: '0 8px' }}>
                   <div className="text-muted" title="Санузел" style={{ fontSize: '15px' }}>🚻</div>
                 </div>
 
@@ -458,19 +458,19 @@ export default function SeatSelectionPage() {
 
         {/* ПРАВАЯ ПАНЕЛЬ «МАРШРУТ» */}
         <div className="col-lg-3">
-          <div className="card p-4 shadow border-0 sticky-top" style={{ backgroundColor: '#1a1d26', color: '#fff', top: '20px' }}>
-            <h5 className="fw-bold mb-3 border-bottom border-secondary pb-2">Маршрут</h5>
+          <div className="card p-4 shadow-sm sticky-top" style={{ backgroundColor: 'var(--card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)', top: '20px' }}>
+            <h5 className="fw-bold mb-3 border-bottom border-soft pb-2">Маршрут</h5>
             <div className="mb-3">
               <div className="fw-bold fs-6">{trainData.departureStation} ➔ {trainData.arrivalStation}</div>
               <div className="small text-muted">{trainData.departureDate} {trainData.departureTime} — {trainData.arrivalDate} {trainData.arrivalTime}</div>
             </div>
-            <div className="mb-3 border-top border-secondary pt-2">
+            <div className="mb-3 border-top border-soft pt-2">
               <div className="small text-muted">Выбрано мест:</div>
               <div className="fw-bold">{selectedSeats.join(', ') || 'не выбрано'}</div>
             </div>
-            <div className="d-flex justify-content-between align-items-center mb-4 border-top border-secondary pt-3">
+            <div className="d-flex justify-content-between align-items-center mb-4 border-top border-soft pt-3">
               <span className="fw-bold fs-5">Всего</span>
-              <span className="fw-bold fs-4" style={{ color: '#0dcaf0' }}>{totalPrice.toLocaleString()} ₸</span>
+              <span className="fw-bold fs-4" style={{ color: 'var(--accent-teal)' }}>{totalPrice.toLocaleString()} ₸</span>
             </div>
             <button 
               className="btn btn-teal w-100 fw-bold py-2"
