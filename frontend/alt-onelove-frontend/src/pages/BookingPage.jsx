@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import Steps from '../components/Steps';
 
 const GUARANTEE_RATE = 0.08;    // как на сервере: «Гарантия возврата денег»
 const FAST_REFUND_RATE = 0.05;  // как на сервере: «Быстрый возврат средств»
@@ -26,23 +27,6 @@ function Field({ label, error, children, className = '' }) {
       <label className="form-label small text-muted mb-1">{label}</label>
       {children}
       {error && <div className="text-danger small mt-1">{error}</div>}
-    </div>
-  );
-}
-
-function Steps() {
-  const items = ['Результаты поиска', 'Выбор места', 'Бронирование', 'Оплата', 'Ваш заказ'];
-  return (
-    <div className="d-flex flex-wrap gap-2 align-items-center small mb-4">
-      {items.map((item, i) => (
-        <React.Fragment key={item}>
-          <span className={i < 2 ? 'text-success' : i === 2 ? 'fw-bold' : 'text-muted'}
-                style={i === 2 ? { color: 'var(--accent-teal)' } : undefined}>
-            {i < 2 && <i className="bi bi-check-lg me-1"></i>}{item}
-          </span>
-          {i < items.length - 1 && <i className="bi bi-chevron-right text-muted"></i>}
-        </React.Fragment>
-      ))}
     </div>
   );
 }
@@ -132,7 +116,7 @@ export default function BookingPage() {
   // ---------- Страница бронирования ----------
   return (
     <div className="container my-4">
-      <Steps />
+      <Steps current={2} onStepClick={(i) => navigate(i - 2)} />
 
       <div className="row g-4">
         <div className="col-lg-8">
