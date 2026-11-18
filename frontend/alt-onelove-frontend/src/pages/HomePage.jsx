@@ -109,14 +109,14 @@ export default function HomePage() {
           className={`p-1 rounded ${isPast ? 'opacity-25' : (isAvailable ? 'cursor-pointer' : 'opacity-50')}`}
           style={{ 
             fontSize: '11px', 
-            backgroundColor: isSelected ? '#0dcaf0' : (isAvailable ? 'rgba(13, 202, 240, 0.15)' : 'transparent'), 
-            border: isSelected ? '1px solid #fff' : '1px solid transparent',
-            color: isSelected ? '#12151c' : (isAvailable ? 'var(--bs-body-color)' : '#6c757d'),
+            backgroundColor: isSelected ? 'var(--accent-teal)' : (isAvailable ? 'var(--accent-soft)' : 'transparent'), 
+            border: isSelected ? '1px solid var(--accent-teal)' : '1px solid transparent',
+            color: isSelected ? 'var(--primary-blue)' : (isAvailable ? 'var(--bs-body-color)' : 'var(--bs-secondary-color)'),
             cursor: isPast ? 'not-allowed' : (isAvailable ? 'pointer' : 'default')
           }}
         >
           <div className="fw-bold">{dayNum}</div>
-          <div style={{ fontSize: '8px', color: '#6c757d' }}>{!isPast && price ? price : ''}</div>
+          <div style={{ fontSize: '8px', color: 'var(--bs-secondary-color)' }}>{!isPast && price ? price : ''}</div>
         </div>
       );
     }

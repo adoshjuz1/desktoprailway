@@ -239,14 +239,14 @@ export default function SearchResultsPage() {
           className={`p-1 rounded ${isPast ? 'opacity-25' : (isAvailable ? 'cursor-pointer' : 'opacity-50')}`}
           style={{ 
             fontSize: '11px', 
-            backgroundColor: isSelected ? '#0dcaf0' : (isAvailable ? 'rgba(13, 202, 240, 0.15)' : 'transparent'), 
-            border: isSelected ? '1px solid #fff' : '1px solid transparent',
-            color: isSelected ? '#12151c' : (isAvailable ? 'var(--text-color, #fff)' : '#6c757d'),
+            backgroundColor: isSelected ? 'var(--accent-teal)' : (isAvailable ? 'var(--accent-soft)' : 'transparent'), 
+            border: isSelected ? '1px solid var(--accent-teal)' : '1px solid transparent',
+            color: isSelected ? 'var(--primary-blue)' : (isAvailable ? 'var(--text-color)' : 'var(--bs-secondary-color)'),
             cursor: isPast ? 'not-allowed' : (isAvailable ? 'pointer' : 'default')
           }}
         >
           <div className="fw-bold">{dayNum}</div>
-          <div style={{ fontSize: '8px', color: '#6c757d' }}>{!isPast && price ? price : ''}</div>
+          <div style={{ fontSize: '8px', color: 'var(--bs-secondary-color)' }}>{!isPast && price ? price : ''}</div>
         </div>
       );
     }
@@ -322,7 +322,7 @@ export default function SearchResultsPage() {
               placeholder="Туда"
               readOnly 
               onClick={() => setActiveCalendarTab(activeCalendarTab === 'there' ? null : 'there')} 
-              style={{ backgroundColor: 'var(--bs-body-bg)', color: 'var(--bs-body-color)', border: '1px solid var(--border-color, #444)' }}
+              style={{ backgroundColor: 'var(--bs-body-bg)', color: 'var(--bs-body-color)', border: '1px solid var(--border-color)' }}
             />
           </div>
 
@@ -338,7 +338,7 @@ export default function SearchResultsPage() {
                 placeholder="В одну сторону"
                 readOnly 
                 onClick={() => setActiveCalendarTab(activeCalendarTab === 'back' ? null : 'back')} 
-                style={{ backgroundColor: 'var(--bs-body-bg)', color: 'var(--bs-body-color)', border: '1px solid var(--border-color, #444)' }}
+                style={{ backgroundColor: 'var(--bs-body-bg)', color: 'var(--bs-body-color)', border: '1px solid var(--border-color)' }}
               />
               {returnDateInput && (
                 <span 
@@ -446,7 +446,7 @@ export default function SearchResultsPage() {
               type="button" 
               className="btn btn-outline-secondary btn-sm px-2 py-3" 
               onClick={() => scrollRibbon('left')}
-              style={{ borderColor: 'var(--border-color, #444)', color: 'var(--text-color)' }}
+              style={{ borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
             >
               ‹
             </button>
@@ -474,8 +474,8 @@ export default function SearchResultsPage() {
                       style={{ 
                         minWidth: '120px', 
                         backgroundColor: isActive ? 'var(--accent-teal)' : 'var(--card-bg)', 
-                        color: isActive ? '#000' : 'var(--text-color)',
-                        border: isActive ? '1px solid var(--accent-teal)' : '1px solid var(--border-color, #333)'
+                        color: isActive ? 'var(--primary-blue)' : 'var(--text-color)',
+                        border: isActive ? '1px solid var(--accent-teal)' : '1px solid var(--border-color)'
                       }}
                     >
                       <div className="small fw-semibold">{item.day} {item.date}</div>
@@ -490,7 +490,7 @@ export default function SearchResultsPage() {
               type="button" 
               className="btn btn-outline-secondary btn-sm px-2 py-3" 
               onClick={() => scrollRibbon('right')}
-              style={{ borderColor: 'var(--border-color, #444)', color: 'var(--text-color)' }}
+              style={{ borderColor: 'var(--border-color)', color: 'var(--text-color)' }}
             >
               ›
             </button>
@@ -545,7 +545,7 @@ export default function SearchResultsPage() {
                               <div 
                                 className="p-2 border rounded-3 text-center cursor-pointer"
                                 onClick={() => goToSeatSelection(train, 'coupe')}
-                                style={{ backgroundColor: 'var(--input-bg, #212529)', borderColor: 'var(--border-color, #444)', minHeight: '62px' }}
+                                style={{ backgroundColor: 'var(--card-inset)', borderColor: 'var(--border-color)', minHeight: '62px' }}
                               >
                                 <div className="fw-bold small">Купе</div>
                                 <div className="fw-bold mt-1" style={{ color: 'var(--accent-teal)', fontSize: '13px' }}>от {coupePrice.toLocaleString()} ₸</div>
@@ -558,7 +558,7 @@ export default function SearchResultsPage() {
                               <div 
                                 className="p-2 border rounded-3 text-center cursor-pointer"
                                 onClick={() => goToSeatSelection(train, 'platskart')}
-                                style={{ backgroundColor: 'var(--input-bg, #212529)', borderColor: 'var(--border-color, #444)', minHeight: '62px' }}
+                                style={{ backgroundColor: 'var(--card-inset)', borderColor: 'var(--border-color)', minHeight: '62px' }}
                               >
                                 <div className="fw-bold small">Плацкарт</div>
                                 <div className="fw-bold mt-1" style={{ color: 'var(--accent-teal)', fontSize: '13px' }}>от {platskartPrice.toLocaleString()} ₸</div>

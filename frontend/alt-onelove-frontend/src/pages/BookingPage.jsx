@@ -192,7 +192,7 @@ export default function BookingPage() {
               <div className="text-end">
                 <div className="fw-bold">{money(Math.round(ticketsTotal * FAST_REFUND_RATE))}</div>
                 <div className="small text-muted mb-2">для всех пассажиров</div>
-                <button type="button" className={`btn btn-sm ${fastRefund ? 'btn-success' : 'btn-outline-secondary'}`}
+                <button type="button" className={`btn btn-sm ${fastRefund ? 'btn-teal' : 'btn-outline-secondary'}`}
                         onClick={() => setFastRefund(v => !v)}>
                   {fastRefund ? <>Добавлено <i className="bi bi-x-lg ms-1"></i></> : <>Добавить <i className="bi bi-plus-lg ms-1"></i></>}
                 </button>
@@ -211,7 +211,7 @@ export default function BookingPage() {
               <div className="text-end">
                 <div className="fw-bold">{money(Math.round(ticketsTotal * GUARANTEE_RATE))}</div>
                 <div className="small text-muted mb-2">для всех пассажиров</div>
-                <button type="button" className={`btn btn-sm ${refundGuarantee ? 'btn-success' : 'btn-outline-secondary'}`}
+                <button type="button" className={`btn btn-sm ${refundGuarantee ? 'btn-teal' : 'btn-outline-secondary'}`}
                         onClick={() => setRefundGuarantee(v => !v)}>
                   {refundGuarantee ? <>Добавлено <i className="bi bi-x-lg ms-1"></i></> : <>Добавить <i className="bi bi-plus-lg ms-1"></i></>}
                 </button>

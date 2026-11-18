@@ -171,7 +171,7 @@ export default function PaymentPage() {
         <div
           className="d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 small"
           style={{
-            background: secondsLeft < 300 ? 'rgba(220, 53, 69, 0.15)' : 'rgba(0, 180, 216, 0.12)',
+            background: secondsLeft < 300 ? 'rgba(220, 53, 69, 0.15)' : 'var(--accent-soft)',
             color: secondsLeft < 300 ? '#dc3545' : 'var(--accent-teal)',
           }}
         >
@@ -199,7 +199,7 @@ export default function PaymentPage() {
                         ? '2px solid var(--accent-teal)'
                         : '1px solid var(--border-color)',
                       background: selected
-                        ? 'rgba(0, 180, 216, 0.08)'
+                        ? 'var(--accent-soft)'
                         : 'transparent',
                       transition: 'all 0.15s ease',
                     }}
@@ -226,7 +226,7 @@ export default function PaymentPage() {
                     </span>
                     <span className="flex-grow-1 fw-medium">{m.title}</span>
                     {m.badge && (
-                      <span className="badge rounded-pill text-bg-light border small fw-normal">
+                      <span className="badge rounded-pill border small fw-normal" style={{ backgroundColor: 'var(--card-inset)', color: 'var(--text-color)' }}>
                         {m.badge}
                       </span>
                     )}

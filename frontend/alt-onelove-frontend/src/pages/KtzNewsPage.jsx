@@ -24,14 +24,14 @@ export default function KtzNewsPage() {
     <div>
       <div className="py-4 text-center text-white" style={{ background: 'linear-gradient(135deg, #0F2C59 0%, #071428 100%)' }}>
         <div className="container">
-          <h2 className="fw-bold mb-1"><i className="bi bi-newspaper me-2 text-info"></i>Новости «Қазақстан темір жолы»</h2>
+          <h2 className="fw-bold mb-1"><i className="bi bi-newspaper me-2" style={{ color: 'var(--accent-teal)' }}></i>Новости «Қазақстан темір жолы»</h2>
           <p className="mb-0 opacity-75 small">Официальные обновления, изменения расписания и события КТЖ</p>
         </div>
       </div>
 
       <div className="container my-5">
         {loading ? (
-          <div className="text-center py-5"><div className="spinner-border text-info"></div></div>
+          <div className="text-center py-5"><div className="spinner-border" style={{ color: 'var(--accent-teal)' }}></div></div>
         ) : news.length === 0 ? (
           <div className="text-center py-5 text-muted">Новости КТЖ пока отсутствуют в базе данных.</div>
         ) : (
