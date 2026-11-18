@@ -1,5 +1,5 @@
-import React from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import Steps from '../components/Steps';
 
 const money = (n) => `${Math.round(n).toLocaleString('ru-RU')} ₸`;
 
@@ -8,26 +8,6 @@ const cardStyle = {
   color: 'var(--text-color)',
   borderColor: 'var(--border-color)',
 };
-
-function Steps() {
-  const items = ['Результаты поиска', 'Выбор места', 'Бронирование', 'Оплата', 'Ваш заказ'];
-  return (
-    <div className="d-flex flex-wrap gap-2 align-items-center small mb-4">
-      {items.map((item, i) => (
-        <React.Fragment key={item}>
-          <span
-            className={i < 4 ? 'text-success' : 'fw-bold'}
-            style={i === 4 ? { color: 'var(--accent-teal)' } : undefined}
-          >
-            {i < 4 && <i className="bi bi-check-lg me-1"></i>}
-            {item}
-          </span>
-          {i < items.length - 1 && <i className="bi bi-chevron-right text-muted"></i>}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
 
 export default function OrderSuccessPage() {
   const location = useLocation();
@@ -53,7 +33,7 @@ export default function OrderSuccessPage() {
 
   return (
     <div className="container my-4 my-md-5" style={{ maxWidth: '760px' }}>
-      <Steps />
+      <Steps current={4} />
 
       <div className="card p-4 p-md-5 border rounded-4 shadow-sm" style={cardStyle}>
         <div className="text-center mb-4">
