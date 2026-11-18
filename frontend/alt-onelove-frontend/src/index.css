@@ -113,3 +113,28 @@ body {
 .hover-underline:hover {
   text-decoration: underline !important;
 }
+
+/* ---------- Общие цвета для страниц (светлая и тёмная тема) ---------- */
+:root {
+    --card-inset: #eef2f7;                  /* вложенные блоки внутри карточек */
+    --accent-soft: rgba(0, 180, 216, 0.12); /* мягкая подсветка выбранного */
+    --seat-free: #0F2C59;                   /* место свободно */
+    --seat-busy: #adb5bd;                   /* место занято */
+    --seat-selected: #00B4D8;               /* место выбрано */
+}
+
+[data-bs-theme="dark"] {
+    --card-inset: #0d1626;
+    --accent-soft: rgba(0, 180, 216, 0.15);
+    --seat-free: #2f6fd1;
+    --seat-busy: #3a4560;
+    --seat-selected: #00B4D8;
+}
+
+.border-soft {
+    border-color: var(--border-color) !important;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
