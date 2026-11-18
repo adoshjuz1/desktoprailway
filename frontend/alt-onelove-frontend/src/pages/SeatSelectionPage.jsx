@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Steps from '../components/Steps';
 
 export default function SeatSelectionPage() {
   const navigate = useNavigate();
@@ -257,23 +258,8 @@ export default function SeatSelectionPage() {
   return (
     <div className="container-fluid py-4 px-md-5" style={{ backgroundColor: '#12151c', minHeight: '100vh', color: '#fff' }}>
       
-      {/* ИСПРАВЛЕННЫЕ ХЛЕБНЫЕ КРОШКИ */}
       <div className="container mb-3 px-0">
-        <nav aria-label="breadcrumb">
-          <ol className="breadcrumb mb-0" style={{ fontSize: '13px' }}>
-            <li className="breadcrumb-item">
-              <span className="text-muted ursor-pointer hover-underline" onClick={() => navigate(-1)}>
-                Результаты поиска
-              </span>
-            </li>
-            <li className="breadcrumb-item active" style={{ color: '#0dcaf0' }} aria-current="page">
-              Выбор места
-            </li>
-            <li className="breadcrumb-item text-muted">Бронирование</li>
-            <li className="breadcrumb-item text-muted">Оплата</li>
-            <li className="breadcrumb-item text-muted">Ваш заказ</li>
-          </ol>
-        </nav>
+        <Steps current={1} className="mb-0" onStepClick={(i) => navigate(i - 1)} />
       </div>
 
       <div className="row g-4">

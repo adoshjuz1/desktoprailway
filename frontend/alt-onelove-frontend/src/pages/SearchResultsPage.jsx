@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import Steps from '../components/Steps';
 
 export default function SearchResultsPage() {
   const [searchParams] = useSearchParams();
@@ -281,6 +282,7 @@ export default function SearchResultsPage() {
 
   return (
     <div className="container" style={{ marginTop: '30px' }}>
+      <Steps current={0} />
       {/* Верхняя поисковая панель */}
       <div className="search-box mb-4 p-3 position-relative" style={{ backgroundColor: 'var(--card-bg)', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)', marginTop: '20px' }}>
         <form onSubmit={handleSearchSubmit} className="row g-3 align-items-end">

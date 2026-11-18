@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import Steps from '../components/Steps';
 
 const API_URL = 'http://127.0.0.1:8000';
 
@@ -39,26 +40,6 @@ const PAYMENT_METHODS = [
     color: '#8B5CF6',
   },
 ];
-
-function Steps() {
-  const items = ['Результаты поиска', 'Выбор места', 'Бронирование', 'Оплата', 'Ваш заказ'];
-  return (
-    <div className="d-flex flex-wrap gap-2 align-items-center small mb-4">
-      {items.map((item, i) => (
-        <React.Fragment key={item}>
-          <span
-            className={i < 3 ? 'text-success' : i === 3 ? 'fw-bold' : 'text-muted'}
-            style={i === 3 ? { color: 'var(--accent-teal)' } : undefined}
-          >
-            {i < 3 && <i className="bi bi-check-lg me-1"></i>}
-            {item}
-          </span>
-          {i < items.length - 1 && <i className="bi bi-chevron-right text-muted"></i>}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
 
 function formatTimer(seconds) {
   const h = Math.floor(seconds / 3600);
@@ -183,7 +164,7 @@ export default function PaymentPage() {
   // ---------- Форма оплаты ----------
   return (
     <div className="container my-4 my-md-5">
-      <Steps />
+      <Steps current={3} onStepClick={(i) => navigate(i - 3)} />
 
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
         <h4 className="fw-bold mb-0">Оплата</h4>
