@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { newsApi } from '../api';
 
 export default function KtzNewsPage() {
   const [news, setNews] = useState([]);
@@ -7,8 +8,8 @@ export default function KtzNewsPage() {
   const currentLang = localStorage.getItem('selected_lang') || 'ru';
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8001/api/posts/')
-      .then(res => res.json())
+    newsApi.get('/api/posts/', { params: { page_size: 100 } })
+      .then(res => res.data)
       .then(data => {
         const items = data.results || data;
         const ktzFiltered = items.filter(item => (item.source || '').toLowerCase() === 'ktz');

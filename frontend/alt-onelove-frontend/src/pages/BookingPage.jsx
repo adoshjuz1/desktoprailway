@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
 import Steps from '../components/Steps';
 
 const GUARANTEE_RATE = 0.08;    // как на сервере: «Гарантия возврата денег»

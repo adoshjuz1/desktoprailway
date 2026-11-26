@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import { trainsApi } from '../api';
 import Steps from '../components/Steps';
 
-const API_URL = 'http://127.0.0.1:8000';
 
 const money = (n) => `${Math.round(n).toLocaleString('ru-RU')} ₸`;
 
@@ -122,7 +121,7 @@ export default function PaymentPage() {
 
     setSubmitting(true);
     try {
-      const response = await axios.post(`${API_URL}/api/bookings`, {
+      const response = await trainsApi.post('/api/bookings', {
         train_id: order.trainId,
         travel_date: order.date,
         carriage_number: order.carriageNumber,

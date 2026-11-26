@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { newsApi } from '../api';
 
 export default function PostDetailPage() {
   const { id } = useParams();
@@ -9,7 +9,7 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get(`http://127.0.0.1:8001/api/posts/${id}/`)
+    newsApi.get(`/api/posts/${id}/`)
       .then(res => setPost(res.data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false));

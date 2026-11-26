@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { trainsApi } from '../api';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -18,11 +19,10 @@ export default function HomePage() {
 
   const fetchCalendarPrices = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/trains/available-dates?from_city=${encodeURIComponent(depStation)}&to_city=${encodeURIComponent(arrStation)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setTrainPricesByDate(data);
-      }
+      const { data } = await trainsApi.get('/api/trains/available-dates', {
+        params: { from_city: depStation, to_city: arrStation }
+      });
+      setTrainPricesByDate(data);
     } catch (err) {
       console.error('Ошибка загрузки доступных дат:', err);
     }

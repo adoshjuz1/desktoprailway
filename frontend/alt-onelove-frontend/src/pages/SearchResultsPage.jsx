@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import Steps from '../components/Steps';
+import { trainsApi } from '../api';
 
 export default function SearchResultsPage() {
   const [searchParams] = useSearchParams();
@@ -112,15 +113,9 @@ export default function SearchResultsPage() {
   const fetchTrains = async () => {
     setLoading(true);
     try {
-      const queryParams = new URLSearchParams({
-        from_city: fromParam,
-        to_city: toParam,
-        date: dateInput
+      const { data } = await trainsApi.get('/api/trains/search', {
+        params: { from_city: fromParam, to_city: toParam, date: dateInput }
       });
-
-      const response = await fetch(`http://127.0.0.1:8000/api/trains/search?${queryParams.toString()}`);
-      if (!response.ok) throw new Error('Ошибка сети');
-      const data = await response.json();
       setTrains(data);
     } catch (error) {
       console.error('Ошибка бэкенда FastAPI:', error);
@@ -132,12 +127,11 @@ export default function SearchResultsPage() {
 
   const fetchAvailableDates = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/trains/available-dates?from_city=${encodeURIComponent(fromParam)}&to_city=${encodeURIComponent(toParam)}`);
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableDatesMap(data);
-        setTrainPricesByDate(data);
-      }
+      const { data } = await trainsApi.get('/api/trains/available-dates', {
+        params: { from_city: fromParam, to_city: toParam }
+      });
+      setAvailableDatesMap(data);
+      setTrainPricesByDate(data);
     } catch (err) {
       console.error('Ошибка загрузки дат для ленты:', err);
     }

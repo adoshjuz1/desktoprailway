@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import { trainsApi } from '../api';
 
-const API_URL = 'http://127.0.0.1:8000';
 const money = (n) => `${Math.round(n).toLocaleString('ru-RU')} ₸`;
 
 const cardStyle = {
@@ -36,8 +35,8 @@ export default function Mytickets() {
       return;
     }
 
-    axios
-      .get(`${API_URL}/api/bookings`, { params: { user_email: email } })
+    trainsApi
+      .get('/api/bookings', { params: { user_email: email } })
       .then((res) => setBookings(Array.isArray(res.data) ? res.data : []))
       .catch(() => setError('Не удалось загрузить заказы'))
       .finally(() => setLoading(false));

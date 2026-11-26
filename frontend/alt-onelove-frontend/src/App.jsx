@@ -17,6 +17,7 @@ import SavedPassengersPage from './pages/SavedPassengersPage';
 import LoyaltyPage from './pages/LoyaltyPage';
 import PaymentCardsPage from './pages/PaymentCardsPage';
 import Profilesettings from './pages/Profilesettings';
+import { newsApi, NEWS_API_URL, apiErrorMessage } from './api';
 
 function Navigation() {
   const [lang, setLang] = useState(localStorage.getItem('selected_lang') || 'ru');
@@ -37,8 +38,8 @@ function Navigation() {
       }
     }
 
-    fetch('http://127.0.0.1:8001/api/categories/')
-      .then(res => res.json())
+    newsApi.get('/api/categories/')
+      .then(res => res.data)
       .then(data => {
         const items = data.results || data;
         setCategories(items);
@@ -243,7 +244,7 @@ function Navigation() {
 
                       {currentUser.is_staff && (
                         <a 
-                          href="http://127.0.0.1:8001/admin/" 
+                          href={`${NEWS_API_URL}/admin/`} 
                           target="_blank" 
                           rel="noopener noreferrer" 
                           className="profile-link fw-bold text-warning"
@@ -350,39 +351,29 @@ function GlobalAuthModal() {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://127.0.0.1:8001/api/login/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginEmail, password: loginPassword })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Ошибка входа');
+      const { data } = await newsApi.post('/api/login/', { username: loginEmail, password: loginPassword });
 
       localStorage.setItem('user', JSON.stringify(data));
       alert('Авторизация успешна!');
       window.location.reload();
     } catch (err) {
-      alert(err.message);
+      alert(apiErrorMessage(err, 'Ошибка входа'));
     }
   };
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://127.0.0.1:8001/api/register/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: regEmail, email: regEmail, password: regPassword, full_name: regFullName })
+      const { data } = await newsApi.post('/api/register/', {
+        username: regEmail, email: regEmail, password: regPassword, full_name: regFullName
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Ошибка регистрации');
 
       alert(data.message || 'Регистрация прошла успешно!');
       setRegFullName('');
       setRegEmail('');
       setRegPassword('');
     } catch (err) {
-      alert(err.message);
+      alert(apiErrorMessage(err, 'Ошибка регистрации'));
     }
   };
 
