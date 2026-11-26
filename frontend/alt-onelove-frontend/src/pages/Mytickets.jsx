@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { trainsApi } from '../api';
+import { trainsApi, apiErrorMessage } from '../api';
 
 const money = (n) => `${Math.round(n).toLocaleString('ru-RU')} ₸`;
 
@@ -16,31 +16,82 @@ const statusLabel = (s) => {
   return { text: s || '—', className: 'text-muted' };
 };
 
+// «1 пассажир», «2 пассажира», «5 пассажиров»
+const passengersText = (n) => {
+  const last = n % 10;
+  const lastTwo = n % 100;
+  if (lastTwo >= 11 && lastTwo <= 14) return `${n} пассажиров`;
+  if (last === 1) return `${n} пассажир`;
+  if (last >= 2 && last <= 4) return `${n} пассажира`;
+  return `${n} пассажиров`;
+};
+
+// Логин вошедшего пользователя (App.jsx сохраняет его в localStorage при входе)
+const readUserEmail = () => {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    return user?.email || user?.username || null;
+  } catch {
+    return null;
+  }
+};
+
 export default function Mytickets() {
+  const [email] = useState(readUserEmail);
   const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(email));
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(null);
+  const [notice, setNotice] = useState('');
+  // Окно возврата: { booking, info, error }, info приходит с сервера
+  const [refund, setRefund] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
-    let user = null;
-    try {
-      user = JSON.parse(localStorage.getItem('user') || 'null');
-    } catch {
-      user = null;
-    }
-    const email = user?.email || user?.username;
-    if (!email) {
-      setLoading(false);
-      return;
-    }
-
+    if (!email) return;
     trainsApi
       .get('/api/bookings', { params: { user_email: email } })
       .then((res) => setBookings(Array.isArray(res.data) ? res.data : []))
       .catch(() => setError('Не удалось загрузить заказы'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [email]);
+
+  const openRefund = (b) => {
+    setRefund({ booking: b, info: null, error: '' });
+    trainsApi
+      .get(`/api/bookings/${b.booking_id}/refund`, { params: { user_email: email } })
+      .then(({ data }) => setRefund((r) => (r ? { ...r, info: data } : r)))
+      .catch((err) =>
+        setRefund((r) => (r ? { ...r, error: apiErrorMessage(err, 'Не удалось получить условия возврата') } : r))
+      );
+  };
+
+  const confirmRefund = async () => {
+    const id = refund.booking.booking_id;
+    setCancelling(true);
+    try {
+      const { data } = await trainsApi.post(`/api/bookings/${id}/cancel`, { user_email: email });
+      setBookings((list) =>
+        list.map((b) => (b.booking_id === id ? { ...b, status: 'cancelled', refund_amount: data.refund_amount } : b))
+      );
+      setNotice(`Заказ №${id} отменён. Вернём ${money(data.refund_amount)} ${data.eta}.`);
+      setRefund(null);
+    } catch (err) {
+      setRefund((r) => (r ? { ...r, error: apiErrorMessage(err, 'Не удалось оформить возврат') } : r));
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  if (!email) {
+    return (
+      <div className="card border rounded-4 p-5 text-center" style={cardStyle}>
+        <div style={{ fontSize: '3rem' }}>🔒</div>
+        <h5 className="fw-bold mt-3 mb-2">Войдите в аккаунт</h5>
+        <p className="text-muted small mb-0">Заказы отображаются после входа.</p>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="text-muted py-5 text-center">Загрузка заказов…</div>;
@@ -67,9 +118,17 @@ export default function Mytickets() {
 
   return (
     <div className="d-flex flex-column gap-3">
+      {notice && (
+        <div className="alert alert-success alert-dismissible mb-0" role="alert">
+          {notice}
+          <button type="button" className="btn-close" aria-label="Закрыть" onClick={() => setNotice('')}></button>
+        </div>
+      )}
+
       {bookings.map((b) => {
         const st = statusLabel(b.status);
         const isOpen = expanded === b.booking_id;
+        const isCancelled = b.status === 'cancelled';
         return (
           <div key={b.booking_id} className="card border rounded-4 p-3 p-md-4" style={cardStyle}>
             <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
@@ -82,20 +141,30 @@ export default function Mytickets() {
                   {b.departure_time}
                   {b.departure_time ? ', ' : ''}
                   {b.travel_date}
-                  {b.passengers_count ? `, ${b.passengers_count} пассажир` : ''}
+                  {b.passengers_count ? `, ${passengersText(b.passengers_count)}` : ''}
                 </div>
               </div>
               <div className="text-end">
                 <div className={`fw-semibold ${st.className}`}>{st.text}</div>
                 <div className="fw-bold">{money(b.total_price)}</div>
+                {isCancelled && b.refund_amount != null && (
+                  <div className="small text-muted">Возврат: {money(b.refund_amount)}</div>
+                )}
               </div>
-              <button
-                type="button"
-                className="btn btn-sm btn-outline-secondary"
-                onClick={() => setExpanded(isOpen ? null : b.booking_id)}
-              >
-                {isOpen ? 'Скрыть' : 'Подробнее'}
-              </button>
+              <div className="d-flex gap-2">
+                {b.status === 'paid' && (
+                  <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => openRefund(b)}>
+                    Вернуть билеты
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={() => setExpanded(isOpen ? null : b.booking_id)}
+                >
+                  {isOpen ? 'Скрыть' : 'Подробнее'}
+                </button>
+              </div>
             </div>
 
             {isOpen && (
@@ -126,6 +195,57 @@ export default function Mytickets() {
           </div>
         );
       })}
+
+      {/* Окно подтверждения возврата */}
+      {refund && (
+        <>
+          <div className="modal d-block" tabIndex={-1} role="dialog" aria-modal="true">
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title fw-bold">Возврат билетов</h5>
+                  <button type="button" className="btn-close" aria-label="Закрыть" onClick={() => setRefund(null)}></button>
+                </div>
+                <div className="modal-body">
+                  <div className="small text-muted mb-3">
+                    Заказ № {refund.booking.booking_id}: {refund.booking.from_city} → {refund.booking.to_city}, {refund.booking.travel_date}
+                  </div>
+
+                  {!refund.info && !refund.error && <div className="text-muted">Считаем сумму возврата…</div>}
+
+                  {refund.error && <div className="alert alert-danger mb-0">{refund.error}</div>}
+
+                  {refund.info && !refund.info.allowed && (
+                    <div className="alert alert-warning mb-0">{refund.info.reason}</div>
+                  )}
+
+                  {refund.info && refund.info.allowed && (
+                    <>
+                      <div className="fs-5 fw-bold">Вернём {money(refund.info.refund_amount)}</div>
+                      <div className="text-muted small mb-3">
+                        {refund.info.percent}% от стоимости билетов, {refund.info.eta}.
+                        Дополнительные услуги не возвращаются.
+                      </div>
+                      <div className="small">Места освободятся, отменить возврат будет нельзя.</div>
+                    </>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-outline-secondary" onClick={() => setRefund(null)}>
+                    {refund.info && refund.info.allowed ? 'Оставить билеты' : 'Закрыть'}
+                  </button>
+                  {refund.info && refund.info.allowed && (
+                    <button type="button" className="btn btn-danger" disabled={cancelling} onClick={confirmRefund}>
+                      {cancelling ? 'Оформляем…' : 'Вернуть билеты'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="modal-backdrop show"></div>
+        </>
+      )}
     </div>
   );
 }
