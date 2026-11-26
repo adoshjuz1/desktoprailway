@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
@@ -79,20 +80,32 @@ def train_runs_on_date(train_schedule: str, date_str: str) -> bool:
         return True
 
 
+HOLD_MINUTES = 15  # сколько минут места удерживаются на время оплаты
+
+
 def today_start() -> datetime:
     """Сегодняшняя дата без времени: начало календаря и значение по умолчанию."""
     return datetime.combine(datetime.now().date(), datetime.min.time())
 
 
+def active_booking_filter():
+    """Заказы, которые занимают места: оплаченные и ещё не просроченные удержания."""
+    cutoff = datetime.utcnow() - timedelta(minutes=HOLD_MINUTES)
+    return or_(
+        models.Booking.status == "paid",
+        and_(models.Booking.status == "pending", models.Booking.created_at >= cutoff),
+    )
+
+
 def get_taken_seats(db: Session, train_id: int, travel_date: str) -> dict:
-    """Занятые места на дату: {номер_вагона: {номера_мест}} (по оплаченным билетам)."""
+    """Занятые места на дату: {номер_вагона: {номера_мест}} (оплаченные и удерживаемые)."""
     rows = (
         db.query(models.Booking.carriage_number, models.Ticket.seat_number)
         .join(models.Ticket, models.Ticket.booking_id == models.Booking.id)
         .filter(
             models.Booking.train_id == train_id,
             models.Booking.travel_date == travel_date,
-            models.Booking.status == "paid",
+            active_booking_filter(),
         )
         .all()
     )
@@ -320,8 +333,9 @@ class BookingCreate(BaseModel):
     user_email: Optional[str] = None
 
 
-@app.post("/api/bookings", status_code=201, summary="Оформить заказ: места и данные пассажиров")
-def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
+def place_order(data: BookingCreate, db: Session, status: str):
+    """Проверяет данные и сохраняет заказ со статусом status ("paid" или "pending").
+    Возвращает (заказ, поезд)."""
     # 1. Контакты
     email = data.contact_email.strip()
     phone = data.contact_phone.strip()
@@ -360,6 +374,16 @@ def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Поезд не найден")
     if not train_runs_on_date(train.schedule_days, data.travel_date):
         raise HTTPException(status_code=400, detail="Поезд не ходит в выбранную дату")
+
+    # Новое удержание заменяет прежнее удержание того же человека на тот же поезд и дату
+    # (например, если он вернулся назад и оформляет заново): иначе его же места считались бы занятыми
+    if status == "pending":
+        db.query(models.Booking).filter(
+            models.Booking.status == "pending",
+            models.Booking.contact_email == email,
+            models.Booking.train_id == train.id,
+            models.Booking.travel_date == data.travel_date,
+        ).update({"status": "released"})
 
     carriage = db.query(models.Carriage).filter(
         models.Carriage.train_id == train.id,
@@ -408,7 +432,7 @@ def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
         total_price=total_price,
         refund_guarantee=data.refund_guarantee,
         fast_refund=data.fast_refund,
-        status="paid",
+        status=status,
     )
     for p in data.passengers:
         booking.tickets.append(models.Ticket(
@@ -425,16 +449,29 @@ def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
     db.add(booking)
     db.commit()
     db.refresh(booking)
+    return booking, train
 
+
+def seconds_left(booking) -> Optional[int]:
+    """Сколько секунд осталось на оплату (только для заказов в ожидании оплаты)."""
+    if booking.status != "pending":
+        return None
+    passed = (datetime.utcnow() - booking.created_at).total_seconds()
+    return max(0, int(HOLD_MINUTES * 60 - passed))
+
+
+def order_response(booking, train_number: str, message: str = "") -> dict:
     return {
-        "message": "Заказ успешно оформлен!",
+        "message": message,
         "booking_id": booking.id,
-        "train_number": train.number,
+        "status": booking.status,
+        "seconds_left": seconds_left(booking),
+        "train_number": train_number,
         "travel_date": booking.travel_date,
         "carriage_number": booking.carriage_number,
-        "tickets_price": tickets_price,
-        "extras_price": extras_price,
-        "total_price": total_price,
+        "tickets_price": booking.tickets_price,
+        "extras_price": booking.extras_price,
+        "total_price": booking.total_price,
         "tickets": [
             {
                 "seat_number": t.seat_number,
@@ -445,6 +482,75 @@ def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
         ],
     }
 
+
+@app.post("/api/bookings", status_code=201, summary="Оформить заказ сразу как оплаченный")
+def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
+    booking, train = place_order(data, db, "paid")
+    return order_response(booking, train.number, "Заказ успешно оформлен!")
+
+
+@app.post("/api/bookings/hold", status_code=201, summary="Удержать места на время оплаты")
+def hold_booking(data: BookingCreate, db: Session = Depends(get_db)):
+    booking, train = place_order(data, db, "pending")
+    return order_response(booking, train.number, f"Места удерживаются {HOLD_MINUTES} минут")
+
+
+# ---------- Оплата и освобождение мест ----------
+
+PAYMENT_METHODS = {"card", "kaspi", "installment", "mobile"}
+
+
+class PaymentIn(BaseModel):
+    payment_method: str   # card / kaspi / installment / mobile; данные карты на сервер не отправляются
+
+
+def get_booking_or_404(db: Session, booking_id: int):
+    booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Заказ не найден")
+    # Просроченное удержание помечаем, и места снова становятся свободными
+    if booking.status == "pending" and seconds_left(booking) == 0:
+        booking.status = "expired"
+        db.commit()
+        db.refresh(booking)
+    return booking
+
+
+@app.get("/api/bookings/{booking_id}", summary="Состояние заказа (для страницы оплаты)")
+def get_booking(booking_id: int, db: Session = Depends(get_db)):
+    booking = get_booking_or_404(db, booking_id)
+    return order_response(booking, booking.train_number)
+
+
+@app.post("/api/bookings/{booking_id}/pay", summary="Оплатить удержанный заказ")
+def pay_booking(booking_id: int, data: PaymentIn, db: Session = Depends(get_db)):
+    booking = get_booking_or_404(db, booking_id)
+    if booking.status == "paid":
+        raise HTTPException(status_code=400, detail="Заказ уже оплачен")
+    if booking.status != "pending":
+        raise HTTPException(status_code=410, detail="Время на оплату истекло. Выберите места заново")
+    if data.payment_method not in PAYMENT_METHODS:
+        raise HTTPException(status_code=400, detail="Неизвестный способ оплаты")
+
+    booking.status = "paid"
+    booking.payment_method = data.payment_method
+    booking.paid_at = datetime.utcnow()
+    db.commit()
+    db.refresh(booking)
+    return order_response(booking, booking.train_number, "Оплата прошла успешно!")
+
+
+@app.post("/api/bookings/{booking_id}/release", summary="Отменить удержание и освободить места")
+def release_booking(booking_id: int, db: Session = Depends(get_db)):
+    booking = get_booking_or_404(db, booking_id)
+    if booking.status == "pending":
+        booking.status = "released"
+        db.commit()
+        db.refresh(booking)
+    elif booking.status == "paid":
+        raise HTTPException(status_code=400, detail="Оплаченный заказ нельзя освободить")
+    return order_response(booking, booking.train_number)
+
 @app.get("/api/bookings", summary="Список заказов пользователя по email")
 def list_bookings(user_email: Optional[str] = Query(None), db: Session = Depends(get_db)):
     if not user_email or not user_email.strip():
@@ -452,7 +558,10 @@ def list_bookings(user_email: Optional[str] = Query(None), db: Session = Depends
 
     rows = (
         db.query(models.Booking)
-        .filter(models.Booking.user_email == user_email.strip())
+        .filter(
+            models.Booking.user_email == user_email.strip(),
+            models.Booking.status.in_(["paid", "cancelled"]),
+        )
         .order_by(models.Booking.created_at.desc())
         .all()
     )
