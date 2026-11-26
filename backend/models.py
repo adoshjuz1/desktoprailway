@@ -76,7 +76,9 @@ class Booking(Base):
     total_price = Column(Float, nullable=False)              # итого
     refund_guarantee = Column(Boolean, default=False)        # «Гарантия возврата денег»
     fast_refund = Column(Boolean, default=False)             # «Быстрый возврат средств»
-    status = Column(String, default="paid")
+    payment_method = Column(String, nullable=True)           # card / kaspi / installment / mobile
+    paid_at = Column(DateTime, nullable=True)                # когда оплачен
+    status = Column(String, default="paid")                  # pending / paid / expired / released / cancelled
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
     user = relationship("User", back_populates="bookings")
