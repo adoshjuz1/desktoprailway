@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import Steps from '../components/Steps';
+import { trainsApi, apiErrorMessage } from '../api';
 
 const GUARANTEE_RATE = 0.08;    // как на сервере: «Гарантия возврата денег»
 const FAST_REFUND_RATE = 0.05;  // как на сервере: «Быстрый возврат средств»
@@ -54,6 +55,8 @@ export default function BookingPage() {
   const [refundGuarantee, setRefundGuarantee] = useState(false);
   const [fastRefund, setFastRefund] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState('');
 
   // Если страницу открыли напрямую, без выбора мест
   if (!order || !order.seats || order.seats.length === 0) {
@@ -88,26 +91,57 @@ export default function BookingPage() {
   };
 
   // Переход на страницу оплаты — заказ создаётся уже там
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setApiError('');
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length > 0) return;
 
-    navigate('/payment', {
-      state: {
-        order,
-        passengers,
-        email: email.trim(),
-        phone,
-        refundGuarantee,
-        fastRefund,
-        ticketsTotal,
-        guaranteePrice,
-        fastRefundPrice,
-        total,
-        userLogin,
-      },
-    });
+    setSubmitting(true);
+    try {
+      // Удерживаем места на время оплаты: пока идёт оплата, их никто не займёт
+      const { data } = await trainsApi.post('/api/bookings/hold', {
+        train_id: order.trainId,
+        travel_date: order.date,
+        carriage_number: order.carriageNumber,
+        contact_email: email.trim(),
+        contact_phone: `+7${phone}`,
+        passengers: passengers.map((p) => ({
+          seat_number: p.seatNumber,
+          first_name: p.firstName.trim(),
+          last_name: p.lastName.trim(),
+          document_type: p.documentType,
+          document_number: p.documentNumber.trim(),
+          citizenship: p.citizenship.trim() || 'Казахстан',
+          iin: p.iin,
+        })),
+        refund_guarantee: refundGuarantee,
+        fast_refund: fastRefund,
+        user_email: userLogin,
+      });
+
+      navigate('/payment', {
+        state: {
+          order,
+          passengers,
+          email: email.trim(),
+          phone,
+          refundGuarantee,
+          fastRefund,
+          ticketsTotal,
+          guaranteePrice,
+          fastRefundPrice,
+          total,
+          userLogin,
+          bookingId: data.booking_id,
+          secondsLeft: data.seconds_left,
+        },
+      });
+    } catch (err) {
+      setApiError(apiErrorMessage(err, 'Не удалось забронировать места. Проверьте данные и попробуйте ещё раз.'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const inputClass = (key) => `form-control ${errors[key] ? 'is-invalid' : ''}`;
@@ -221,13 +255,14 @@ export default function BookingPage() {
           {Object.keys(errors).length > 0 && (
             <div className="alert alert-danger">Проверьте поля, отмеченные красным.</div>
           )}
+          {apiError && <div className="alert alert-danger">{apiError}</div>}
 
           <div className="d-flex justify-content-between align-items-center gap-3 flex-wrap">
             <button type="button" className="btn btn-outline-secondary" onClick={() => navigate(-1)}>
               <i className="bi bi-arrow-left me-1"></i>Назад к выбору мест
             </button>
-            <button type="button" className="btn btn-teal px-4 py-2" onClick={handleSubmit}>
-              Перейти к оплате
+            <button type="button" className="btn btn-teal px-4 py-2" disabled={submitting} onClick={handleSubmit}>
+              {submitting ? 'Удерживаем места...' : 'Перейти к оплате'}
             </button>
           </div>
         </div>
