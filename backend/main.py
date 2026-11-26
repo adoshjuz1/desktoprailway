@@ -540,6 +540,78 @@ def pay_booking(booking_id: int, data: PaymentIn, db: Session = Depends(get_db))
     return order_response(booking, booking.train_number, "Оплата прошла успешно!")
 
 
+# ---------- Возврат оплаченного заказа ----------
+# Учебные правила возврата:
+#  • с «Гарантией возврата денег» возвращается 100% стоимости билетов в любое время до отправления;
+#  • без гарантии: не позднее чем за 24 часа до отправления 90%, позже 50%;
+#  • после отправления поезда возврат невозможен.
+# «Быстрый возврат средств» влияет только на срок: 48 часов вместо 10 дней.
+# Допуслуги (гарантия и быстрый возврат) не возвращаются.
+
+class CancelIn(BaseModel):
+    user_email: str   # логин владельца заказа (пока без токенов: проверка по почте)
+
+
+def calc_refund(booking, train) -> dict:
+    eta = "в течение 48 часов" if booking.fast_refund else "в течение 10 дней"
+    if booking.status != "paid":
+        return {"allowed": False, "reason": "Возврат возможен только для оплаченного заказа"}
+
+    # Время отправления считаем по местному времени сервера
+    departure = datetime.strptime(f"{booking.travel_date} {train.departure_time}", "%Y-%m-%d %H:%M")
+    hours_left = (departure - datetime.now()).total_seconds() / 3600
+    if hours_left <= 0:
+        return {"allowed": False, "reason": "Поезд уже отправился, возврат невозможен"}
+
+    if booking.refund_guarantee:
+        percent = 100
+    elif hours_left >= 24:
+        percent = 90
+    else:
+        percent = 50
+
+    return {
+        "allowed": True,
+        "percent": percent,
+        "refund_amount": int(booking.tickets_price * percent / 100 + 0.5),
+        "eta": eta,
+        "hours_left": round(hours_left, 1),
+    }
+
+
+def get_own_booking(db: Session, booking_id: int, user_email: str):
+    booking = get_booking_or_404(db, booking_id)
+    if not booking.user_email or booking.user_email != (user_email or "").strip():
+        raise HTTPException(status_code=403, detail="Это не ваш заказ")
+    return booking
+
+
+@app.get("/api/bookings/{booking_id}/refund", summary="Условия возврата: сколько вернут и когда")
+def refund_preview(booking_id: int, user_email: str = Query(...), db: Session = Depends(get_db)):
+    booking = get_own_booking(db, booking_id, user_email)
+    train = db.query(models.Train).filter(models.Train.id == booking.train_id).first()
+    return calc_refund(booking, train)
+
+
+@app.post("/api/bookings/{booking_id}/cancel", summary="Вернуть билеты: отменить оплаченный заказ")
+def cancel_booking(booking_id: int, data: CancelIn, db: Session = Depends(get_db)):
+    booking = get_own_booking(db, booking_id, data.user_email)
+    train = db.query(models.Train).filter(models.Train.id == booking.train_id).first()
+    refund = calc_refund(booking, train)
+    if not refund["allowed"]:
+        raise HTTPException(status_code=400, detail=refund["reason"])
+
+    booking.status = "cancelled"   # места снова свободны: отменённые заказы их не занимают
+    booking.refund_amount = refund["refund_amount"]
+    booking.cancelled_at = datetime.utcnow()
+    db.commit()
+    db.refresh(booking)
+
+    result = order_response(booking, booking.train_number, "Заказ отменён, деньги вернём на карту")
+    result.update({"refund_amount": booking.refund_amount, "percent": refund["percent"], "eta": refund["eta"]})
+    return result
+
+
 @app.post("/api/bookings/{booking_id}/release", summary="Отменить удержание и освободить места")
 def release_booking(booking_id: int, db: Session = Depends(get_db)):
     booking = get_booking_or_404(db, booking_id)
@@ -582,6 +654,10 @@ def list_bookings(user_email: Optional[str] = Query(None), db: Session = Depends
             "extras_price": b.extras_price,
             "total_price": b.total_price,
             "passengers_count": len(b.tickets),
+            "refund_guarantee": b.refund_guarantee,
+            "fast_refund": b.fast_refund,
+            "refund_amount": b.refund_amount,
+            "cancelled_at": b.cancelled_at.isoformat() if b.cancelled_at else None,
             "tickets": [
                 {
                     "seat_number": t.seat_number,
