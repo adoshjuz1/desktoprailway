@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Post, Category
+from .models import Post, Category, PostImage
 
 
 @admin.register(Category)
@@ -19,8 +19,18 @@ class CategoryAdmin(admin.ModelAdmin):
     )
 
 
+class PostImageInline(admin.TabularInline):
+    """Галерея: каждая строка одно фото. Если фото одно, на сайте оно показывается одно."""
+    model = PostImage
+    extra = 3
+    fields = ('image', 'order')
+    verbose_name = "Фото галереи"
+    verbose_name_plural = "Фото галереи (можно добавить несколько)"
+
+
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
+    inlines = [PostImageInline]
     # Добавили 'source' в таблицу списка новостей
     list_display = ('id', 'title', 'source', 'category', 'created_at')
     list_display_links = ('id', 'title')

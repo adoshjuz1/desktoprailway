@@ -56,3 +56,18 @@ class Post(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class PostImage(models.Model):
+    """Фото в галерее новости: можно загрузить сколько угодно, порядок задаёт поле «Порядок»."""
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='images', verbose_name="Новость")
+    image = models.ImageField(upload_to='news_images/', verbose_name="Фото")
+    order = models.PositiveIntegerField(default=0, verbose_name="Порядок")
+
+    class Meta:
+        ordering = ['order', 'id']
+        verbose_name = "Фото галереи"
+        verbose_name_plural = "Фото галереи"
+
+    def __str__(self):
+        return f"Фото {self.pk} к новости {self.post_id}"
