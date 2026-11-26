@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from typing import List, Optional
+import os
 import re
 
 import models
@@ -13,9 +14,16 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ALT ONE LOVE API")
 
+# Разрешённые адреса сайта (можно задать в .env: CORS_ORIGINS=адрес1,адрес2)
+CORS_ORIGINS = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+    if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,6 +77,11 @@ def train_runs_on_date(train_schedule: str, date_str: str) -> bool:
         return weekday_num in allowed_days
     except:
         return True
+
+
+def today_start() -> datetime:
+    """Сегодняшняя дата без времени: начало календаря и значение по умолчанию."""
+    return datetime.combine(datetime.now().date(), datetime.min.time())
 
 
 def get_taken_seats(db: Session, train_id: int, travel_date: str) -> dict:
@@ -169,7 +182,7 @@ def get_available_dates(from_city: str = "Алматы", to_city: str = "Аты�
         models.Train.to_city.ilike(f"%{to_city}%")
     ).all()
     
-    start_date = datetime(2026, 10, 13)
+    start_date = today_start()
     available_prices = {}
     
     for train in trains:
@@ -234,7 +247,7 @@ def search_trains(from_city: str = "Алматы", to_city: str = "Атырау"
         min_price = min([c["price"] for c in carriages_list]) if carriages_list else 0.0
 
 # Точный расчет даты прибытия: дата отправления + (часы в пути / 24 с округлением вверх/вниз)
-        dep_date_obj = datetime.strptime(date, "%Y-%m-%d") if date else datetime(2026, 10, 16)
+        dep_date_obj = datetime.strptime(date, "%Y-%m-%d") if date else today_start()
         
         transit_days = 1
         if "ч" in train.duration_text:
@@ -333,12 +346,16 @@ def create_booking(data: BookingCreate, db: Session = Depends(get_db)):
 
     # 3. Дата
     try:
-        datetime.strptime(data.travel_date, "%Y-%m-%d")
+        travel_day = datetime.strptime(data.travel_date, "%Y-%m-%d")
     except ValueError:
         raise HTTPException(status_code=400, detail="Дата должна быть в формате ГГГГ-ММ-ДД")
+    if travel_day < today_start():
+        raise HTTPException(status_code=400, detail="Нельзя оформить билет на прошедшую дату")
 
     # 4. Поезд и вагон
-    train = db.query(models.Train).filter(models.Train.id == data.train_id).first()
+    # with_for_update блокирует строку поезда до конца транзакции: два одновременных
+    # заказа на одни места выстраиваются в очередь, и второй получает 409
+    train = db.query(models.Train).filter(models.Train.id == data.train_id).with_for_update().first()
     if not train:
         raise HTTPException(status_code=404, detail="Поезд не найден")
     if not train_runs_on_date(train.schedule_days, data.travel_date):
