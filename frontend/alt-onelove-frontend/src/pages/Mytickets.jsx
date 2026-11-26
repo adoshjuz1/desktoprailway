@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { trainsApi, apiErrorMessage } from '../api';
+import { useToast } from '../toast';
 
 const money = (n) => `${Math.round(n).toLocaleString('ru-RU')} ₸`;
 
@@ -37,12 +38,12 @@ const readUserEmail = () => {
 };
 
 export default function Mytickets() {
+  const toast = useToast();
   const [email] = useState(readUserEmail);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(Boolean(email));
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(null);
-  const [notice, setNotice] = useState('');
   // Окно возврата: { booking, info, error }, info приходит с сервера
   const [refund, setRefund] = useState(null);
   const [cancelling, setCancelling] = useState(false);
@@ -74,7 +75,7 @@ export default function Mytickets() {
       setBookings((list) =>
         list.map((b) => (b.booking_id === id ? { ...b, status: 'cancelled', refund_amount: data.refund_amount } : b))
       );
-      setNotice(`Заказ №${id} отменён. Вернём ${money(data.refund_amount)} ${data.eta}.`);
+      toast.success(`Заказ №${id} отменён. Вернём ${money(data.refund_amount)} ${data.eta}.`);
       setRefund(null);
     } catch (err) {
       setRefund((r) => (r ? { ...r, error: apiErrorMessage(err, 'Не удалось оформить возврат') } : r));
@@ -118,13 +119,6 @@ export default function Mytickets() {
 
   return (
     <div className="d-flex flex-column gap-3">
-      {notice && (
-        <div className="alert alert-success alert-dismissible mb-0" role="alert">
-          {notice}
-          <button type="button" className="btn-close" aria-label="Закрыть" onClick={() => setNotice('')}></button>
-        </div>
-      )}
-
       {bookings.map((b) => {
         const st = statusLabel(b.status);
         const isOpen = expanded === b.booking_id;

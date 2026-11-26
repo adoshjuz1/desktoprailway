@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { ThemeProvider, useTheme } from './ThemeContext';
+import { ToastProvider } from './ToastContext';
+import { useToast, flashToast } from './toast';
 import HomePage from './pages/HomePage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import SeatSelectionPage from './pages/SeatSelectionPage';
@@ -342,6 +344,7 @@ function Navigation() {
 
 // Глобальное модальное окно авторизации
 function GlobalAuthModal() {
+  const toast = useToast();
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [regFullName, setRegFullName] = useState('');
@@ -354,10 +357,11 @@ function GlobalAuthModal() {
       const { data } = await newsApi.post('/api/login/', { username: loginEmail, password: loginPassword });
 
       localStorage.setItem('user', JSON.stringify(data));
-      alert('Авторизация успешна!');
+      // страница перезагрузится, поэтому сообщение показываем уже после перезагрузки
+      flashToast('success', 'Вы вошли в аккаунт');
       window.location.reload();
     } catch (err) {
-      alert(apiErrorMessage(err, 'Ошибка входа'));
+      toast.error(apiErrorMessage(err, 'Ошибка входа'));
     }
   };
 
@@ -368,12 +372,12 @@ function GlobalAuthModal() {
         username: regEmail, email: regEmail, password: regPassword, full_name: regFullName
       });
 
-      alert(data.message || 'Регистрация прошла успешно!');
+      toast.success(data.message || 'Регистрация прошла успешно!');
       setRegFullName('');
       setRegEmail('');
       setRegPassword('');
     } catch (err) {
-      alert(apiErrorMessage(err, 'Ошибка регистрации'));
+      toast.error(apiErrorMessage(err, 'Ошибка регистрации'));
     }
   };
 
@@ -490,6 +494,7 @@ function GlobalAuthModal() {
 export default function App() {
   return (
     <ThemeProvider>
+      <ToastProvider>
       <Router>
         <Navigation />
 
@@ -522,6 +527,7 @@ export default function App() {
           </div>
         </footer>
       </Router>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

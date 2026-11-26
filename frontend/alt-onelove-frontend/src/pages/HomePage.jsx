@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { trainsApi } from '../api';
+import { useToast } from '../toast';
 
 export default function HomePage() {
+  const toast = useToast();
   const navigate = useNavigate();
   
   const [depStation, setDepStation] = useState('Алматы');
@@ -37,7 +39,7 @@ export default function HomePage() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (!depStation.trim() || !arrStation.trim()) {
-      alert('Пожалуйста, укажите станции отправления и назначения');
+      toast.error('Пожалуйста, укажите станции отправления и назначения');
       return;
     }
     const todayStr = new Date().toISOString().split('T')[0];
@@ -267,7 +269,7 @@ export default function HomePage() {
             <p className="mb-0 opacity-90 fs-6">Путешествуйте по Казахстану с максимальным комфортом. Бронируйте ж/д билеты за 45 дней до поездки и получайте гарантированную скидку на премиум-места и купе.</p>
           </div>
           <div>
-            <button className="btn btn-light fw-bold px-4 py-3 shadow" style={{ color: '#0F2C59', fontSize: '16px' }} onClick={() => alert('Переход к акции')}>
+            <button className="btn btn-light fw-bold px-4 py-3 shadow" style={{ color: '#0F2C59', fontSize: '16px' }} onClick={() => toast.info('Подробности акции появятся позже')}>
               Узнать подробнее <i className="bi bi-arrow-right ms-1"></i>
             </button>
           </div>
