@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import Steps from '../components/Steps';
 import { trainsApi, apiErrorMessage } from '../api';
+import { loadSavedPassengers, rememberPassengers } from '../savedPassengers';
 
 const GUARANTEE_RATE = 0.08;    // как на сервере: «Гарантия возврата денег»
 const FAST_REFUND_RATE = 0.05;  // как на сервере: «Быстрый возврат средств»
@@ -57,6 +58,8 @@ export default function BookingPage() {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [savedList] = useState(loadSavedPassengers);
+  const [remember, setRemember] = useState(false);
 
   // Если страницу открыли напрямую, без выбора мест
   if (!order || !order.seats || order.seats.length === 0) {
@@ -75,6 +78,22 @@ export default function BookingPage() {
 
   const updatePassenger = (index, field, value) => {
     setPassengers(prev => prev.map((p, i) => (i === index ? { ...p, [field]: value } : p)));
+  };
+
+  // Подставляет данные выбранного сохранённого пассажира в форму места №index
+  const applySaved = (index, savedId) => {
+    const saved = savedList.find((x) => String(x.id) === savedId);
+    if (!saved) return;
+    const [firstName = '', ...rest] = saved.fullName.trim().split(/\s+/);
+    setPassengers(prev => prev.map((p, i) => (i === index ? {
+      ...p,
+      firstName,
+      lastName: rest.join(' '),
+      documentType: saved.documentType || p.documentType,
+      documentNumber: saved.documentNumber || '',
+      citizenship: saved.citizenship || 'Казахстан',
+      iin: saved.iin || '',
+    } : p)));
   };
 
   const validate = () => {
@@ -119,6 +138,8 @@ export default function BookingPage() {
         fast_refund: fastRefund,
         user_email: userLogin,
       });
+
+      if (remember) rememberPassengers(passengers);
 
       navigate('/payment', {
         state: {
@@ -178,6 +199,14 @@ export default function BookingPage() {
               <h5 className="fw-bold mb-3">
                 Данные пассажира {i + 1} <span className="text-muted fw-normal small">· место {p.seatNumber}</span>
               </h5>
+              {savedList.length > 0 && (
+                <select className="form-select form-select-sm mb-3" value="" onChange={(e) => applySaved(i, e.target.value)}>
+                  <option value="">Подставить из сохранённых пассажиров…</option>
+                  {savedList.map((x) => (
+                    <option key={x.id} value={x.id}>{x.fullName}</option>
+                  ))}
+                </select>
+              )}
               <div className="row">
                 <Field label="Имя" error={errors[`p${i}_firstName`]} className="col-md-6">
                   <input type="text" className={inputClass(`p${i}_firstName`)} value={p.firstName}
@@ -250,6 +279,14 @@ export default function BookingPage() {
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="form-check mb-3">
+            <input className="form-check-input" type="checkbox" id="rememberPassengers"
+                   checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+            <label className="form-check-label small" htmlFor="rememberPassengers">
+              Сохранить данные пассажиров для следующих покупок (только в этом браузере)
+            </label>
           </div>
 
           {Object.keys(errors).length > 0 && (

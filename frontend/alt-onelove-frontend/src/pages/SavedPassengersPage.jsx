@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { loadSavedPassengers, saveSavedPassengers } from '../savedPassengers';
+import { useToast } from '../toast';
 
 const cardStyle = {
   backgroundColor: 'var(--card-bg)',
@@ -7,33 +9,25 @@ const cardStyle = {
 };
 
 const DOC_TYPES = ['Удостоверение личности', 'Паспорт', 'Свидетельство о рождении'];
-const STORAGE_KEY = 'saved_passengers';
 
 const emptyForm = () => ({
   fullName: '',
   citizenship: 'Казахстан',
   documentType: DOC_TYPES[0],
   documentNumber: '',
+  iin: '',
 });
 
 export default function SavedPassengersPage() {
-  const [list, setList] = useState([]);
+  const toast = useToast();
+  const [list, setList] = useState(loadSavedPassengers);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(emptyForm());
   const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      setList(raw ? JSON.parse(raw) : []);
-    } catch {
-      setList([]);
-    }
-  }, []);
-
   const persist = (next) => {
     setList(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    saveSavedPassengers(next);
   };
 
   const startAdd = () => {
@@ -49,12 +43,20 @@ export default function SavedPassengersPage() {
       citizenship: p.citizenship,
       documentType: p.documentType,
       documentNumber: p.documentNumber,
+      iin: p.iin || '',
     });
     setShowForm(true);
   };
 
   const save = () => {
-    if (!form.fullName.trim() || !form.documentNumber.trim()) return;
+    if (!form.fullName.trim() || !form.documentNumber.trim()) {
+      toast.error('Укажите ФИО и номер документа');
+      return;
+    }
+    if (form.iin && form.iin.length !== 12) {
+      toast.error('ИИН должен состоять из 12 цифр или остаться пустым');
+      return;
+    }
     if (editingId) {
       persist(
         list.map((p) =>
@@ -72,6 +74,7 @@ export default function SavedPassengersPage() {
           citizenship: form.citizenship.trim() || 'Казахстан',
           documentType: form.documentType,
           documentNumber: form.documentNumber.trim(),
+          iin: form.iin,
         },
       ]);
     }
@@ -91,7 +94,8 @@ export default function SavedPassengersPage() {
       <div className="alert alert-info small py-2">
         <div className="mb-1">
           <i className="bi bi-check-circle-fill text-success me-1"></i>
-          Здесь хранятся данные пассажиров для быстрых покупок
+          Здесь хранятся данные пассажиров для быстрых покупок: они подставляются при бронировании.
+          Данные хранятся только в этом браузере.
         </div>
         <div className="text-muted">
           <i className="bi bi-exclamation-triangle-fill text-warning me-1"></i>
@@ -146,6 +150,16 @@ export default function SavedPassengersPage() {
                 onChange={(e) => setForm({ ...form, documentNumber: e.target.value })}
               />
             </div>
+            <div className="col-md-6">
+              <label className="form-label small text-muted">ИИН (необязательно, 12 цифр)</label>
+              <input
+                className="form-control"
+                inputMode="numeric"
+                maxLength={12}
+                value={form.iin}
+                onChange={(e) => setForm({ ...form, iin: e.target.value.replace(/\D/g, '') })}
+              />
+            </div>
           </div>
           <div className="d-flex gap-2 mt-3">
             <button type="button" className="btn btn-teal" onClick={save}>
@@ -178,6 +192,12 @@ export default function SavedPassengersPage() {
                   {p.documentType}
                   <span className="mx-2">·</span>
                   {p.documentNumber}
+                  {p.iin && (
+                    <>
+                      <span className="mx-2">·</span>
+                      ИИН ••••••••{p.iin.slice(-4)}
+                    </>
+                  )}
                 </div>
               </div>
               <div className="d-flex gap-2">
