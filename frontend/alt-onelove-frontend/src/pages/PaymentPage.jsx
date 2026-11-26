@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { trainsApi } from '../api';
+import { trainsApi, apiErrorMessage } from '../api';
 import Steps from '../components/Steps';
 
 
@@ -59,7 +59,8 @@ export default function PaymentPage() {
   const [cardName, setCardName] = useState('');
   const [promoEnabled, setPromoEnabled] = useState(false);
   const [promoCode, setPromoCode] = useState('');
-  const [secondsLeft, setSecondsLeft] = useState(35 * 60); // 35 минут
+  // Время на оплату считает сервер (удержание мест), сюда приходит остаток секунд
+  const [secondsLeft, setSecondsLeft] = useState(payload?.secondsLeft ?? 0);
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
   const [cardErrors, setCardErrors] = useState({});
@@ -79,8 +80,31 @@ export default function PaymentPage() {
     return () => clearInterval(timerRef.current);
   }, []);
 
+  // Сверяем таймер с сервером (например, после обновления страницы)
+  const bookingId = payload?.bookingId;
+  useEffect(() => {
+    if (!bookingId) return undefined;
+    let active = true;
+    trainsApi
+      .get(`/api/bookings/${bookingId}`)
+      .then(({ data }) => {
+        if (!active) return;
+        if (data.status === 'paid') {
+          navigate('/my-tickets', { replace: true });
+          return;
+        }
+        setSecondsLeft(data.status === 'pending' ? data.seconds_left : 0);
+      })
+      .catch(() => {
+        // нет связи: остаёмся с тем временем, которое пришло при переходе
+      });
+    return () => {
+      active = false;
+    };
+  }, [bookingId, navigate]);
+
   // Нет данных — пользователь зашёл напрямую
-  if (!payload || !payload.order || !payload.passengers) {
+  if (!payload || !payload.order || !payload.passengers || !payload.bookingId) {
     return (
       <div className="container my-5 text-center">
         <div className="alert alert-warning d-inline-block">
@@ -95,7 +119,17 @@ export default function PaymentPage() {
     );
   }
 
-  const { order, passengers, email, phone, refundGuarantee, fastRefund, total, ticketsTotal, guaranteePrice, fastRefundPrice, userLogin } = payload;
+  const { order, email, refundGuarantee, fastRefund, total, guaranteePrice, fastRefundPrice } = payload;
+
+  // Уходим со страницы: освобождаем места, чтобы они не висели до конца таймера
+  const leave = async (delta) => {
+    try {
+      await trainsApi.post(`/api/bookings/${bookingId}/release`);
+    } catch {
+      // не страшно: сервер освободит места сам по истечении времени
+    }
+    navigate(delta);
+  };
 
   const validateCard = () => {
     if (method !== 'card') return {};
@@ -115,30 +149,15 @@ export default function PaymentPage() {
     if (Object.keys(e).length > 0) return;
 
     if (secondsLeft <= 0) {
-      setApiError('Время на оплату истекло. Вернитесь и оформите заказ заново.');
+      setApiError('Время на оплату истекло. Вернитесь и выберите места заново.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const response = await trainsApi.post('/api/bookings', {
-        train_id: order.trainId,
-        travel_date: order.date,
-        carriage_number: order.carriageNumber,
-        contact_email: email.trim(),
-        contact_phone: phone.startsWith('+') ? phone : `+7${phone}`,
-        passengers: passengers.map((p) => ({
-          seat_number: p.seatNumber,
-          first_name: p.firstName.trim(),
-          last_name: p.lastName.trim(),
-          document_type: p.documentType,
-          document_number: p.documentNumber.trim(),
-          citizenship: p.citizenship.trim() || 'Казахстан',
-          iin: p.iin,
-        })),
-        refund_guarantee: refundGuarantee,
-        fast_refund: fastRefund,
-        user_email: userLogin || null,
+      // Данные карты на сервер не отправляются: платёж в учебной версии имитируется
+      const response = await trainsApi.post(`/api/bookings/${bookingId}/pay`, {
+        payment_method: method,
       });
       clearInterval(timerRef.current);
       navigate('/order-success', {
@@ -151,10 +170,8 @@ export default function PaymentPage() {
         replace: true,
       });
     } catch (err) {
-      const detail = err.response?.data?.detail;
-      if (typeof detail === 'string') setApiError(detail);
-      else if (Array.isArray(detail)) setApiError('Проверьте правильность заполнения всех полей.');
-      else setApiError('Не удалось связаться с сервером. Попробуйте ещё раз.');
+      if (err.response?.status === 410) setSecondsLeft(0);
+      setApiError(apiErrorMessage(err, 'Не удалось связаться с сервером. Попробуйте ещё раз.'));
     } finally {
       setSubmitting(false);
     }
@@ -163,7 +180,13 @@ export default function PaymentPage() {
   // ---------- Форма оплаты ----------
   return (
     <div className="container my-4 my-md-5">
-      <Steps current={3} onStepClick={(i) => navigate(i - 3)} />
+      <Steps current={3} onStepClick={(i) => leave(i - 3)} />
+
+      {secondsLeft <= 0 && (
+        <div className="alert alert-warning">
+          Время на оплату истекло, места освобождены. <Link to="/">Выберите места заново</Link>
+        </div>
+      )}
 
       <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
         <h4 className="fw-bold mb-0">Оплата</h4>
@@ -404,7 +427,7 @@ export default function PaymentPage() {
             <button
               type="button"
               className="btn btn-outline-secondary"
-              onClick={() => navigate(-1)}
+              onClick={() => leave(-1)}
               disabled={submitting}
             >
               <i className="bi bi-arrow-left me-1"></i>
