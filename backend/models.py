@@ -78,6 +78,8 @@ class Booking(Base):
     fast_refund = Column(Boolean, default=False)             # «Быстрый возврат средств»
     payment_method = Column(String, nullable=True)           # card / kaspi / installment / mobile
     paid_at = Column(DateTime, nullable=True)                # когда оплачен
+    refund_amount = Column(Float, nullable=True)             # сумма возврата при отмене
+    cancelled_at = Column(DateTime, nullable=True)           # когда заказ отменён (возврат)
     status = Column(String, default="paid")                  # pending / paid / expired / released / cancelled
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 
