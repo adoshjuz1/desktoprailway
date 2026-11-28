@@ -6,8 +6,7 @@ import { useToast, flashToast } from './toast';
 import HomePage from './pages/HomePage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import SeatSelectionPage from './pages/SeatSelectionPage';
-import KtzNewsPage from './pages/KtzNewsPage';
-import UniNewsPage from './pages/UniNewsPage';
+import NewsListPage from './pages/NewsListPage';
 import PostDetailPage from './pages/PostDetailPage';
 import BookingPage from './pages/BookingPage';
 import PaymentPage from './pages/PaymentPage';
@@ -505,8 +504,8 @@ export default function App() {
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/payment" element={<PaymentPage />} />
           <Route path="/order-success" element={<OrderSuccessPage />} />
-          <Route path="/ktz-news" element={<KtzNewsPage />} />
-          <Route path="/uni-news" element={<UniNewsPage />} />
+          <Route path="/ktz-news" element={<NewsListPage key="ktz" source="ktz" />} />
+          <Route path="/uni-news" element={<NewsListPage key="alt" source="alt" />} />
           <Route path="/post/:id" element={<PostDetailPage />} />
 
           <Route element={<ProfileLayout />}>
